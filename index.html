@@ -239,6 +239,12 @@
             <div class="topbar">
                 <h2 id="page-title" style="margin: 0; font-size: 20px; color: var(--primary); font-weight: 700;">Panel Principal</h2>
                 <div style="display: flex; align-items: center; gap: 15px;">
+                    <!-- BOTÓN DE CAMPANITA DE NOTIFICACIONES -->
+                    <button class="btn" style="position: relative; padding: 0; border-radius: 50%; border: 1px solid #cbd5e1; color: #475569; background: white; display: flex; align-items: center; justify-content: center; width: 42px; height: 42px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.05);" onclick="abrirModalCambios()" title="Ver Registro de Actividad">
+                        <i class="fas fa-bell" style="font-size: 18px;"></i>
+                        <span style="position: absolute; top: 0px; right: 0px; background: #ef4444; width: 12px; height: 12px; border-radius: 50%; border: 2px solid white; box-sizing: border-box;"></span>
+                    </button>
+                    
                     <span id="user-greeting" style="font-size: 14px; color: #475569; font-weight: 500;"></span>
                     <div style="width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--secondary), #1e3a8a); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);" id="avatar-icon">A</div>
                 </div>
@@ -2593,60 +2599,91 @@ function abrirModalPM(equipoId, mes, anio) {
             document.body.appendChild(div);
         }
 // --- SISTEMA DE CONTROL DE CAMBIOS GLOBAL ---
+    // --- SISTEMA DE CONTROL DE CAMBIOS GLOBAL (100 EVENTOS) ---
     function abrirModalCambios() {
         let eventos = [];
         
-        // Extraer el historial de movimientos de todos los tickets
+        // 1. Rastrear Tickets (Creación y Cambios de Estado)
         ticketsDB.forEach(tk => {
+            if(tk.timestampCreacion) {
+                eventos.push({
+                    time: tk.timestampCreacion,
+                    icono: 'fa-plus-circle', color: '#8b5cf6', // Morado para nuevos tickets
+                    desc: `<strong>NUEVO TICKET CREADO:</strong> ${tk.id} <br><span style="font-size:11px; color:#64748b;">Equipo: ${tk.equipoNombre} (${tk.clinica})</span>`
+                });
+            }
             if(tk.historialSLA) {
                 tk.historialSLA.forEach(sla => {
+                    // Evitar duplicar el texto si el evento inicial es el mismo que la creación
+                    if (sla.timestamp !== tk.timestampCreacion) {
+                        eventos.push({
+                            time: sla.timestamp,
+                            icono: 'fa-random', color: '#3b82f6', // Azul para cambios
+                            desc: `Ticket <strong>${tk.id}</strong> cambió a estado: <span style="background:${getBadgeColorReal(sla.estado)}; color:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">${sla.estado}</span>`
+                        });
+                    }
+                });
+            }
+        });
+        
+        // 2. Rastrear Mantenimientos Preventivos y Altas de Equipos
+        equiposDB.forEach(eq => {
+            if(eq.historial) {
+                eq.historial.forEach((h, index) => {
+                    // Convertir la fecha "DD/MM/YYYY" a un valor de tiempo para poder ordenarlo con los tickets
+                    let ts = 0;
+                    if(h.fecha && h.fecha.includes('/')) {
+                        let partes = h.fecha.split('/');
+                        ts = new Date(partes[2], partes[1] - 1, partes[0], 12, 0, 0).getTime() + index; 
+                    }
+                    
+                    let colorIcono = '#64748b'; let icono = 'fa-info-circle';
+                    if(h.tipo.includes('Preventivo')) { colorIcono = '#10b981'; icono = 'fa-check-double'; } // Verde para PM
+                    if(h.tipo.includes('Alta')) { colorIcono = '#f59e0b'; icono = 'fa-star'; } // Naranja para Altas
+                    
                     eventos.push({
-                        time: sla.timestamp,
-                        icono: 'fa-ticket-alt',
-                        color: '#3b82f6', // Azul para tickets
-                        desc: `El ticket <strong>${tk.id}</strong> de la clínica <strong>${tk.clinica}</strong> pasó a estado: <span style="background:${getBadgeColorReal(sla.estado)}; color:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">${sla.estado}</span>`
+                        time: ts,
+                        icono: icono, color: colorIcono,
+                        desc: `<strong>${h.tipo.toUpperCase()}</strong> en equipo ${eq.id} (${eq.tipo})<br><span style="font-size:11px; color:#475569;">${h.desc}</span>`
                     });
                 });
             }
         });
         
-        // Ordenar los eventos del más reciente al más antiguo
+        // Ordenar absolutamente todo desde lo más reciente a lo más antiguo
         eventos.sort((a,b) => b.time - a.time);
         
-        // Cortar la lista para mostrar solo los últimos 25
-        let top25 = eventos.slice(0, 25);
+        // Cortar la lista para mostrar las últimas 100 acciones
+        let top100 = eventos.slice(0, 100);
         
-        // Generar el diseño de cada fila
-        let htmlList = top25.map(e => `
+        let htmlList = top100.map(e => `
             <div style="padding: 15px; border-bottom: 1px solid #e2e8f0; display:flex; align-items:center; gap: 15px; background: white; transition: 0.2s;">
-                <div style="background: ${e.color}20; color: ${e.color}; width: 40px; height: 40px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink: 0;">
+                <div style="background: ${e.color}20; color: ${e.color}; width: 40px; height: 40px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink: 0; border: 1px solid ${e.color}50;">
                     <i class="fas ${e.icono}"></i>
                 </div>
                 <div style="flex-grow:1;">
-                    <p style="margin:0 0 5px 0; font-size:13px; color: #1e293b;">${e.desc}</p>
-                    <span style="font-size:11px; color: #64748b; font-weight: 500;"><i class="far fa-clock"></i> ${new Date(e.time).toLocaleString('es-ES')}</span>
+                    <p style="margin:0 0 5px 0; font-size:12px; color: #1e293b; line-height: 1.4;">${e.desc}</p>
+                    <span style="font-size:10px; color: #94a3b8; font-weight: bold;"><i class="far fa-clock"></i> ${e.time > 0 ? new Date(e.time).toLocaleString('es-ES') : 'Registro Histórico'}</span>
                 </div>
             </div>
         `).join('');
 
-        if(top25.length === 0) htmlList = "<p style='padding:30px; text-align:center; color:#64748b; font-size:14px;'><i class="fas fa-folder-open" style="font-size: 24px; color: #cbd5e1; display: block; margin-bottom: 10px;"></i>No hay eventos recientes en el sistema.</p>";
+        if(top100.length === 0) htmlList = "<p style='padding:40px; text-align:center; color:#64748b; font-size:14px;'><i class='fas fa-inbox' style='font-size: 30px; display: block; margin-bottom: 15px; color:#cbd5e1;'></i>Sin acciones registradas aún.</p>";
 
-        // Limpiar ventana vieja si existiera
         const old = document.getElementById('modal-cambios-global');
         if(old) old.remove();
 
-        // Crear y mostrar la nueva ventana
         const div = document.createElement('div');
         div.id = 'modal-cambios-global';
         div.className = 'modal';
         div.style.display = 'flex';
         div.innerHTML = `
-            <div class="modal-content" style="max-width: 550px; padding: 0; overflow: hidden; background: #f8fafc;">
+            <div class="modal-content" style="max-width: 600px; padding: 0; overflow: hidden; background: #f8fafc;">
                 <div class="modal-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px;">
-                    <h3 style="margin:0; color: var(--primary); font-size: 16px;"><i class="fas fa-list-ul" style="color:var(--secondary); margin-right: 8px;"></i> Registro de Actividad (Últimos 25)</h3>
+                    <h3 style="margin:0; color: var(--primary); font-size: 16px;"><i class="fas fa-history" style="color:var(--secondary); margin-right: 8px;"></i> Registro del Sistema (Últimas 100 acciones)</h3>
                     <button class="close-modal" onclick="document.getElementById('modal-cambios-global').remove()"><i class="fas fa-times"></i></button>
                 </div>
-                <div class="modal-body" style="max-height: 65vh; overflow-y: auto; padding: 0;">
+                <div class="modal-body" style="max-height: 75vh; overflow-y: auto; padding: 0;">
                     ${htmlList}
                 </div>
             </div>
