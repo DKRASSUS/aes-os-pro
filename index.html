@@ -955,6 +955,32 @@
             if(refreshNeeded) refrescarVistasActivas();
         });
 
+        function actualizarBadgesMenu() {
+            if(!currentUser) return;
+            const mesActual = new Date().getMonth() + 1;
+            const anioActual = new Date().getFullYear();
+            let pAdmin = 0; let pClient = 0;
+
+            preventivosDB.forEach(pm => {
+                if(pm.mes === mesActual && pm.anio === anioActual) {
+                    // Al Admin le avisamos de reprogramaciones
+                    if (pm.estado === 'REPROGRAMAR') pAdmin++;
+                    // Al Cliente le avisamos de nuevas propuestas
+                    if (pm.estado === 'PROPUESTA') {
+                        const eq = equiposDB.find(e => e.id === pm.equipoId);
+                        if(eq && eq.clinica === currentUser.user) pClient++;
+                    }
+                }
+            });
+
+            // Mostrar u ocultar la burbuja según corresponda
+            const bA = document.getElementById('badge-mtto-admin');
+            if(bA) { bA.innerText = pAdmin + " Pendientes"; bA.style.display = pAdmin > 0 ? 'inline-block' : 'none'; }
+            
+            const bC = document.getElementById('badge-mtto-cliente');
+            if(bC) { bC.innerText = pClient + " Nuevos"; bC.style.display = pClient > 0 ? 'inline-block' : 'none'; }
+        }
+
         function refrescarVistasActivas() {
             if(document.getElementById('view-equipos').classList.contains('active')) resetPageAndRender();
             if(document.getElementById('view-mantenimientos').classList.contains('active')) renderMantenimientos();
@@ -972,6 +998,9 @@
             if(document.getElementById('hdv-modal') && document.getElementById('hdv-modal').style.display === 'flex' && typeof selectedEquipoId !== 'undefined' && selectedEquipoId) {
                 abrirHojaDeVida(selectedEquipoId);
             }
+            
+            // Refrescar las alertas del menu lateral en vivo
+            actualizarBadgesMenu();
         }
 
         function showToast(message, type = 'info') {
@@ -1255,7 +1284,7 @@
             
             if (isAdmin) {
                 let entornoTexto = window.workspaceActual === 'ALL' ? 'Global' : window.workspaceActual;
-                document.getElementById('user-greeting').innerHTML = `Ing. <strong>Ruben Arismendi</strong> (<span style="color:var(--secondary); font-weight:bold;">${entornoTexto}</span>) <button class="btn btn-outline" style="padding:4px 8px; font-size:11px; margin-left:10px; height:auto; display:inline-flex;" onclick="abrirSelectorWorkspace()"><i class="fas fa-exchange-alt"></i> Cambiar</button>`;
+                document.getElementById('user-greeting').innerHTML = `Ing. <strong>Ruben Arismendi</strong> (<span style="color:var(--secondary); font-weight:bold;">${entornoTexto}</span>) <button class="btn btn-outline" style="padding:4px 8px; font-size:11px; margin-left:10px; height:auto; display:inline-flex;" onclick="abrirSelectorWorkspace()"><i class="fas fa-exchange-alt"></i> Cambiar</button> <button class="btn" style="background:#0f172a; color:white; padding:4px 10px; font-size:11px; margin-left:5px; height:auto; display:inline-flex; border-radius: 4px;" onclick="abrirModalCambios()"><i class="fas fa-bell"></i> Actividad</button>`;
             } else {
                 document.getElementById('user-greeting').innerHTML = `Institución: <strong>${currentUser.user}</strong>`;
             }
@@ -1277,7 +1306,10 @@
                         <li onclick="filtroNavegacion('equipos', 'clinica', 'ALL'); event.stopPropagation();">Ver Toda la Flota Global</li>
                         ${submenuInvHtml}
                     </ul>
-                    <li class="menu-item" onclick="switchTab('mantenimientos')"><i class="fas fa-calendar-check" style="margin-right:15px; width:14px; text-align:center;"></i> Mtto. del Mes</li>
+                    <li class="menu-item" onclick="switchTab('mantenimientos')" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div><i class="fas fa-calendar-check" style="margin-right:15px; width:14px; text-align:center;"></i> Mtto. del Mes</div>
+                        <span id="badge-mtto-admin" style="display:none; background:#ef4444; color:white; border-radius:12px; padding:2px 8px; font-size:10px; font-weight:bold; box-shadow:0 0 5px rgba(239,68,68,0.5); animation: pulse 2s infinite;">0</span>
+                    </li>
                     <li class="menu-item has-submenu" onclick="filtroNavegacion('tickets-admin', 'estado', 'ALL'); toggleSubMenu(event, 'sub-tks')">
                         <div style="display:flex; align-items:center; gap:15px;"><i class="fas fa-clipboard-check"></i> Órdenes de Servicio</div><i class="fas fa-chevron-down"></i>
                     </li>
@@ -1301,7 +1333,10 @@
             } else {
                 menu.innerHTML = `
                     <li class="menu-item" onclick="switchTab('equipos')"><i class="fas fa-microscope" style="margin-right:15px; width:14px; text-align:center;"></i> Mis Equipos Médicos</li>
-                    <li class="menu-item" onclick="switchTab('mantenimientos')"><i class="fas fa-calendar-check" style="margin-right:15px; width:14px; text-align:center;"></i> Mtto. del Mes</li>
+                    <li class="menu-item" onclick="switchTab('mantenimientos')" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div><i class="fas fa-calendar-check" style="margin-right:15px; width:14px; text-align:center;"></i> Mtto. del Mes</div>
+                        <span id="badge-mtto-cliente" style="display:none; background:#f59e0b; color:white; border-radius:12px; padding:2px 8px; font-size:10px; font-weight:bold; box-shadow:0 0 5px rgba(245,158,11,0.5); animation: pulse 2s infinite;">0</span>
+                    </li>
                     <li class="menu-item" onclick="switchTab('tickets-cliente')"><i class="fas fa-clipboard-list" style="margin-right:15px; width:14px; text-align:center;"></i> Mis Órdenes de Soporte</li>
                     <li class="menu-item" onclick="switchTab('sla')"><i class="fas fa-stopwatch" style="margin-right:15px; width:14px; text-align:center;"></i> Tiempos de Soporte (SLA)</li>
                     <li class="menu-item" onclick="switchTab('repuestos')"><i class="fas fa-cogs" style="margin-right:15px; width:14px; text-align:center;"></i> Piezas y Repuestos</li>
@@ -1309,6 +1344,7 @@
                 `;
             }
             poblarFiltros(); switchTab('equipos');
+            actualizarBadgesMenu();
         }
 
         function switchTab(viewId) {
@@ -1474,7 +1510,6 @@
                 tablaHtml += equiposDelMes.map(e => {
                     let pm = preventivosDB.find(p => p.equipoId === e.id && p.mes === parseInt(mesSeleccionado) && p.anio === anioActual);
                     
-                    // ESTADOS Y COLORES POR DEFECTO
                     let rowStyle = "background-color: white;";
                     let btnHtml = `<button class="btn btn-outline" style="padding:6px 12px;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, ${anioActual})"><i class="fas fa-clipboard-check"></i> Gestionar PM</button>`;
                     let fechaMostrar = formatearFecha(e.fechaProximoMtto);
@@ -1483,29 +1518,27 @@
                         if (pm.fechaPropuesta) fechaMostrar = formatearFecha(pm.fechaPropuesta);
                         
                         if (pm.estado === 'PROPUESTA') {
-                            rowStyle = "background-color: #fef9c3;"; // Amarillo (Esperando Confirmación)
+                            rowStyle = "background-color: #fef9c3 !important;"; // Amarillo Forzado
                         } else if (pm.estado === 'REPROGRAMAR') {
-                            rowStyle = "background-color: #fee2e2;"; // Rojo Claro (Reprogramación solicitada)
+                            rowStyle = "background-color: #fee2e2 !important;"; // Rojo Forzado
                             if (pm.fechaSugerida) fechaMostrar = formatearFecha(pm.fechaSugerida) + ' (Sugerida)';
                         } else if (pm.estado === 'AGENDADO') {
-                            rowStyle = "background-color: #dcfce7;"; // Verde (Confirmado para ir)
-                            // Cambio de botón para el Administrador al estar agendado
+                            rowStyle = "background-color: #dcfce7 !important;"; // Verde Forzado
                             if (currentUser.role === 'admin') {
                                 btnHtml = `<button class="btn btn-success" style="padding:6px 12px; background: #059669; font-weight:bold;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, ${anioActual})"><i class="fas fa-upload"></i> Subir Informe y Finalizar</button>`;
                             }
                         } else if (pm.estado === 'COMPLETADO') {
-                            rowStyle = "background-color: #e0f2fe;"; // Celeste Bonito (Terminado)
+                            rowStyle = "background-color: #e0f2fe !important;"; // Celeste Forzado
                             btnHtml = `<button class="btn" style="padding:6px 12px; background: #0284c7; color: white;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, ${anioActual})"><i class="fas fa-check-circle"></i> Ver Reporte Adjunto</button>`;
                         }
                     } else {
-                        // Si no hay nada iniciado, sugerir botón de proponer al admin
                         if (currentUser.role === 'admin') {
                             btnHtml = `<button class="btn btn-outline" style="padding:6px 12px; border-color: #f59e0b; color: #f59e0b;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, ${anioActual})"><i class="fas fa-calendar-plus"></i> Iniciar / Proponer Fecha</button>`;
                         }
                     }
 
                     return `
-                        <tr style="${rowStyle}; transition: 0.3s;">
+                        <tr style="${rowStyle} transition: 0.3s;">
                             <td style="border-bottom: 1px solid rgba(0,0,0,0.05);"><strong>${e.id}</strong></td>
                             <td style="border-bottom: 1px solid rgba(0,0,0,0.05);"><span style="font-weight:600; color:var(--primary);">${e.tipo}</span></td>
                             <td style="border-bottom: 1px solid rgba(0,0,0,0.05);">${e.marca} <br><span style="background:rgba(255,255,255,0.5); padding:2px 6px; border-radius:4px; font-size:11px; color:#1e293b;">${e.modelo}</span></td>
@@ -2559,6 +2592,68 @@ function abrirModalPM(equipoId, mes, anio) {
             `;
             document.body.appendChild(div);
         }
+// --- SISTEMA DE CONTROL DE CAMBIOS GLOBAL ---
+    function abrirModalCambios() {
+        let eventos = [];
+        
+        // Extraer el historial de movimientos de todos los tickets
+        ticketsDB.forEach(tk => {
+            if(tk.historialSLA) {
+                tk.historialSLA.forEach(sla => {
+                    eventos.push({
+                        time: sla.timestamp,
+                        icono: 'fa-ticket-alt',
+                        color: '#3b82f6', // Azul para tickets
+                        desc: `El ticket <strong>${tk.id}</strong> de la clínica <strong>${tk.clinica}</strong> pasó a estado: <span style="background:${getBadgeColorReal(sla.estado)}; color:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">${sla.estado}</span>`
+                    });
+                });
+            }
+        });
+        
+        // Ordenar los eventos del más reciente al más antiguo
+        eventos.sort((a,b) => b.time - a.time);
+        
+        // Cortar la lista para mostrar solo los últimos 25
+        let top25 = eventos.slice(0, 25);
+        
+        // Generar el diseño de cada fila
+        let htmlList = top25.map(e => `
+            <div style="padding: 15px; border-bottom: 1px solid #e2e8f0; display:flex; align-items:center; gap: 15px; background: white; transition: 0.2s;">
+                <div style="background: ${e.color}20; color: ${e.color}; width: 40px; height: 40px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink: 0;">
+                    <i class="fas ${e.icono}"></i>
+                </div>
+                <div style="flex-grow:1;">
+                    <p style="margin:0 0 5px 0; font-size:13px; color: #1e293b;">${e.desc}</p>
+                    <span style="font-size:11px; color: #64748b; font-weight: 500;"><i class="far fa-clock"></i> ${new Date(e.time).toLocaleString('es-ES')}</span>
+                </div>
+            </div>
+        `).join('');
+
+        if(top25.length === 0) htmlList = "<p style='padding:30px; text-align:center; color:#64748b; font-size:14px;'><i class="fas fa-folder-open" style="font-size: 24px; color: #cbd5e1; display: block; margin-bottom: 10px;"></i>No hay eventos recientes en el sistema.</p>";
+
+        // Limpiar ventana vieja si existiera
+        const old = document.getElementById('modal-cambios-global');
+        if(old) old.remove();
+
+        // Crear y mostrar la nueva ventana
+        const div = document.createElement('div');
+        div.id = 'modal-cambios-global';
+        div.className = 'modal';
+        div.style.display = 'flex';
+        div.innerHTML = `
+            <div class="modal-content" style="max-width: 550px; padding: 0; overflow: hidden; background: #f8fafc;">
+                <div class="modal-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px;">
+                    <h3 style="margin:0; color: var(--primary); font-size: 16px;"><i class="fas fa-list-ul" style="color:var(--secondary); margin-right: 8px;"></i> Registro de Actividad (Últimos 25)</h3>
+                    <button class="close-modal" onclick="document.getElementById('modal-cambios-global').remove()"><i class="fas fa-times"></i></button>
+                </div>
+                <div class="modal-body" style="max-height: 65vh; overflow-y: auto; padding: 0;">
+                    ${htmlList}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(div);
+    }
+
     </script>
 </body>
 </html>
