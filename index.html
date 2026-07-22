@@ -969,9 +969,7 @@
 
             preventivosDB.forEach(pm => {
                 if(pm.mes === mesActual && pm.anio === anioActual) {
-                    // Al Admin le avisamos de reprogramaciones
                     if (pm.estado === 'REPROGRAMAR') pAdmin++;
-                    // Al Cliente le avisamos de nuevas propuestas
                     if (pm.estado === 'PROPUESTA') {
                         const eq = equiposDB.find(e => e.id === pm.equipoId);
                         if(eq && eq.clinica === currentUser.user) pClient++;
@@ -979,7 +977,6 @@
                 }
             });
 
-            // Mostrar u ocultar la burbuja según corresponda
             const bA = document.getElementById('badge-mtto-admin');
             if(bA) { bA.innerText = pAdmin + " Pendientes"; bA.style.display = pAdmin > 0 ? 'inline-block' : 'none'; }
             
@@ -1004,8 +1001,6 @@
             if(document.getElementById('hdv-modal') && document.getElementById('hdv-modal').style.display === 'flex' && typeof selectedEquipoId !== 'undefined' && selectedEquipoId) {
                 abrirHojaDeVida(selectedEquipoId);
             }
-            
-            // Refrescar las alertas del menu lateral en vivo
             actualizarBadgesMenu();
         }
 
@@ -1136,7 +1131,6 @@
                 } else { ticketsDB = []; }
                 
                 if(data.preventivos) {
-                    // SISTEMA DE NOTIFICACIONES EN TIEMPO REAL
                     if (preventivosDB.length > 0 && currentUser) {
                         data.preventivos.forEach(np => {
                             const op = preventivosDB.find(p => p.id === np.id);
@@ -1183,7 +1177,6 @@
                 } else {
                     const valid = usuariosDB.find(x => x.user.toLowerCase() === u.toLowerCase() && x.pass === p);
                     if(!valid) { alert("Credenciales incorrectas o institución no registrada."); return; }
-                    if (valid.role === 'admin') { alert("Por seguridad, el administrador ahora debe iniciar sesión usando su correo electrónico."); return; }
 
                     currentUser = valid; 
                     sessionStorage.setItem('aes_logged_in_user', currentUser.user); 
@@ -1290,7 +1283,7 @@
             
             if (isAdmin) {
                 let entornoTexto = window.workspaceActual === 'ALL' ? 'Global' : window.workspaceActual;
-                document.getElementById('user-greeting').innerHTML = `Ing. <strong>Ruben Arismendi</strong> (<span style="color:var(--secondary); font-weight:bold;">${entornoTexto}</span>) <button class="btn btn-outline" style="padding:4px 8px; font-size:11px; margin-left:10px; height:auto; display:inline-flex;" onclick="abrirSelectorWorkspace()"><i class="fas fa-exchange-alt"></i> Cambiar</button> <button class="btn" style="background:#0f172a; color:white; padding:4px 10px; font-size:11px; margin-left:5px; height:auto; display:inline-flex; border-radius: 4px;" onclick="abrirModalCambios()"><i class="fas fa-bell"></i> Actividad</button>`;
+                document.getElementById('user-greeting').innerHTML = `Ing. <strong>Ruben Arismendi</strong> (<span style="color:var(--secondary); font-weight:bold;">${entornoTexto}</span>) <button class="btn btn-outline" style="padding:4px 8px; font-size:11px; margin-left:10px; height:auto; display:inline-flex;" onclick="abrirSelectorWorkspace()"><i class="fas fa-exchange-alt"></i> Cambiar</button>`;
             } else {
                 document.getElementById('user-greeting').innerHTML = `Institución: <strong>${currentUser.user}</strong>`;
             }
@@ -1415,7 +1408,7 @@
             return 'pendiente';
         }
 
-       function renderEquiposTable() {
+        function renderEquiposTable() {
             const search = document.getElementById('search-equip').value.toLowerCase();
             const fC = document.getElementById('filter-clinica').value; const fU = document.getElementById('filter-ubicacion').value;
             const fT = document.getElementById('filter-tipo').value; const fM = document.getElementById('filter-marca').value;
@@ -1461,13 +1454,12 @@
                     }
                 }
 
-                // APLICAR COLOR A LA FILA SEGUN ESTADO DEL MANTENIMIENTO
                 let pm = preventivosDB.find(p => p.equipoId === e.id && p.mes === mesActual && p.anio === anioActual);
                 let rowStyle = "";
                 if (pm) {
-                    if (pm.estado === 'PROPUESTA') rowStyle = "background-color: #fef9c3;"; // Amarillo
-                    else if (pm.estado === 'REPROGRAMAR') rowStyle = "background-color: #fee2e2;"; // Rojo
-                    else if (pm.estado === 'AGENDADO') rowStyle = "background-color: #e0f2fe;"; // Azul
+                    if (pm.estado === 'PROPUESTA') rowStyle = "background-color: #fef9c3;"; 
+                    else if (pm.estado === 'REPROGRAMAR') rowStyle = "background-color: #fee2e2;"; 
+                    else if (pm.estado === 'AGENDADO') rowStyle = "background-color: #e0f2fe;"; 
                 }
 
                 return `
@@ -1524,17 +1516,17 @@
                         if (pm.fechaPropuesta) fechaMostrar = formatearFecha(pm.fechaPropuesta);
                         
                         if (pm.estado === 'PROPUESTA') {
-                            rowStyle = "background-color: #fef9c3 !important;"; // Amarillo Forzado
+                            rowStyle = "background-color: #fef9c3 !important;"; 
                         } else if (pm.estado === 'REPROGRAMAR') {
-                            rowStyle = "background-color: #fee2e2 !important;"; // Rojo Forzado
+                            rowStyle = "background-color: #fee2e2 !important;"; 
                             if (pm.fechaSugerida) fechaMostrar = formatearFecha(pm.fechaSugerida) + ' (Sugerida)';
                         } else if (pm.estado === 'AGENDADO') {
-                            rowStyle = "background-color: #dcfce7 !important;"; // Verde Forzado
+                            rowStyle = "background-color: #dcfce7 !important;"; 
                             if (currentUser.role === 'admin') {
                                 btnHtml = `<button class="btn btn-success" style="padding:6px 12px; background: #059669; font-weight:bold;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, ${anioActual})"><i class="fas fa-upload"></i> Subir Informe y Finalizar</button>`;
                             }
                         } else if (pm.estado === 'COMPLETADO') {
-                            rowStyle = "background-color: #e0f2fe !important;"; // Celeste Forzado
+                            rowStyle = "background-color: #e0f2fe !important;"; 
                             btnHtml = `<button class="btn" style="padding:6px 12px; background: #0284c7; color: white;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, ${anioActual})"><i class="fas fa-check-circle"></i> Ver Reporte Adjunto</button>`;
                         }
                     } else {
@@ -1563,7 +1555,8 @@
             `;
             setTimeout(() => { const selector = document.getElementById('mes-mtto-selector'); if (selector) selector.value = mesSeleccionado; }, 50);
         }
-function abrirModalPM(equipoId, mes, anio) {
+
+        function abrirModalPM(equipoId, mes, anio) {
             const eq = equiposDB.find(e => e.id === equipoId);
             let pm = preventivosDB.find(p => p.equipoId === equipoId && p.mes === mes && p.anio === anio);
             const isAdmin = currentUser.role === 'admin';
@@ -2572,10 +2565,10 @@ function abrirModalPM(equipoId, mes, anio) {
             
             let html = tk.auditoria.map((a, i) => `
                 <div style="background:#f8fafc; border:1px solid #cbd5e1; padding:15px; margin-bottom:10px; border-radius:8px;">
-                    <p style="margin:0 0 5px 0; font-size:11px; color:#64748b;"><strong>Modificación #\${i+1}</strong> - \${a.fecha} por \${a.autor}</p>
-                    <p style="margin:0 0 5px 0; font-size:13px;"><strong>Estado:</strong> \${a.estado}</p>
-                    <p style="margin:0 0 5px 0; font-size:13px;"><strong>Comentario:</strong> \${a.comentario || 'N/A'}</p>
-                    <p style="margin:0; font-size:13px;"><strong>Repuestos:</strong> \${a.piezas || 'N/A'}</p>
+                    <p style="margin:0 0 5px 0; font-size:11px; color:#64748b;"><strong>Modificación #${i+1}</strong> - ${a.fecha} por ${a.autor}</p>
+                    <p style="margin:0 0 5px 0; font-size:13px;"><strong>Estado:</strong> ${a.estado}</p>
+                    <p style="margin:0 0 5px 0; font-size:13px;"><strong>Comentario:</strong> ${a.comentario || 'N/A'}</p>
+                    <p style="margin:0; font-size:13px;"><strong>Repuestos:</strong> ${a.piezas || 'N/A'}</p>
                 </div>
             `).join('');
             
@@ -2592,13 +2585,13 @@ function abrirModalPM(equipoId, mes, anio) {
                         <button class="close-modal" onclick="document.getElementById('modal-auditoria').remove()"><i class="fas fa-times"></i></button>
                     </div>
                     <div class="modal-body" style="max-height:60vh; overflow-y:auto;">
-                        \${html}
+                        ${html}
                     </div>
                 </div>
             `;
             document.body.appendChild(div);
         }
-// --- SISTEMA DE CONTROL DE CAMBIOS GLOBAL ---
+
     // --- SISTEMA DE CONTROL DE CAMBIOS GLOBAL (100 EVENTOS) ---
     function abrirModalCambios() {
         let eventos = [];
