@@ -1444,6 +1444,7 @@
 
         function renderMantenimientos() {
             const mesActual = new Date().getMonth() + 1; 
+            const anioActual = new Date().getFullYear();
             let data = currentUser.role === 'admin' ? equiposDB : equiposDB.filter(e => e.clinica === currentUser.user);
             if (currentUser.role === 'admin' && window.workspaceActual && window.workspaceActual !== 'ALL') {
                 data = data.filter(e => e.clinica === window.workspaceActual);
@@ -1463,23 +1464,57 @@
             const mesSeleccionado = window.mesMttoSeleccionado || mesActual;
             let equiposDelMes = data.filter(e => e.mesesMtto && e.mesesMtto.includes(parseInt(mesSeleccionado)));
 
-            let tablaHtml = `<table class="table" style="width:100%;">
-                <thead><tr><th>ID</th><th>Equipo</th><th>Marca / Modelo</th><th>Ubicación / Sector</th><th>Próximo Mantenimiento</th><th>Acción Preventiva</th></tr></thead>
+            let tablaHtml = `<table class="table" style="width:100%; border-collapse: collapse;">
+                <thead><tr><th>ID</th><th>Equipo</th><th>Marca / Modelo</th><th>Ubicación / Sector</th><th>Fecha Programada</th><th>Acciones de Mantenimiento</th></tr></thead>
                 <tbody>`;
             
             if (equiposDelMes.length === 0) {
                 tablaHtml += `<tr><td colspan="6" align="center" style="padding: 40px; color:#64748b;">No hay mantenimientos programados para este mes en este entorno.</td></tr>`;
             } else {
-                tablaHtml += equiposDelMes.map(e => `
-                    <tr>
-                        <td><strong>${e.id}</strong></td>
-                        <td><span style="font-weight:600; color:var(--primary);">${e.tipo}</span></td>
-                        <td>${e.marca} <br><span style="background:#e2e8f0; padding:2px 6px; border-radius:4px; font-size:11px;">${e.modelo}</span></td>
-                        <td>${e.ubicacion}</td>
-                        <td style="color:var(--secondary); font-weight:bold;">${formatearFecha(e.fechaProximoMtto)}</td>
-                        <td><button class="btn btn-outline" style="padding:6px 12px;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, new Date().getFullYear())"><i class="fas fa-clipboard-check"></i> Gestionar PM</button></td>
-                    </tr>
-                `).join('');
+                tablaHtml += equiposDelMes.map(e => {
+                    let pm = preventivosDB.find(p => p.equipoId === e.id && p.mes === parseInt(mesSeleccionado) && p.anio === anioActual);
+                    
+                    // ESTADOS Y COLORES POR DEFECTO
+                    let rowStyle = "background-color: white;";
+                    let btnHtml = `<button class="btn btn-outline" style="padding:6px 12px;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, ${anioActual})"><i class="fas fa-clipboard-check"></i> Gestionar PM</button>`;
+                    let fechaMostrar = formatearFecha(e.fechaProximoMtto);
+
+                    if (pm) {
+                        if (pm.fechaPropuesta) fechaMostrar = formatearFecha(pm.fechaPropuesta);
+                        
+                        if (pm.estado === 'PROPUESTA') {
+                            rowStyle = "background-color: #fef9c3;"; // Amarillo (Esperando Confirmación)
+                        } else if (pm.estado === 'REPROGRAMAR') {
+                            rowStyle = "background-color: #fee2e2;"; // Rojo Claro (Reprogramación solicitada)
+                            if (pm.fechaSugerida) fechaMostrar = formatearFecha(pm.fechaSugerida) + ' (Sugerida)';
+                        } else if (pm.estado === 'AGENDADO') {
+                            rowStyle = "background-color: #dcfce7;"; // Verde (Confirmado para ir)
+                            // Cambio de botón para el Administrador al estar agendado
+                            if (currentUser.role === 'admin') {
+                                btnHtml = `<button class="btn btn-success" style="padding:6px 12px; background: #059669; font-weight:bold;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, ${anioActual})"><i class="fas fa-upload"></i> Subir Informe y Finalizar</button>`;
+                            }
+                        } else if (pm.estado === 'COMPLETADO') {
+                            rowStyle = "background-color: #e0f2fe;"; // Celeste Bonito (Terminado)
+                            btnHtml = `<button class="btn" style="padding:6px 12px; background: #0284c7; color: white;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, ${anioActual})"><i class="fas fa-check-circle"></i> Ver Reporte Adjunto</button>`;
+                        }
+                    } else {
+                        // Si no hay nada iniciado, sugerir botón de proponer al admin
+                        if (currentUser.role === 'admin') {
+                            btnHtml = `<button class="btn btn-outline" style="padding:6px 12px; border-color: #f59e0b; color: #f59e0b;" onclick="abrirModalPM('${e.id}', ${mesSeleccionado}, ${anioActual})"><i class="fas fa-calendar-plus"></i> Iniciar / Proponer Fecha</button>`;
+                        }
+                    }
+
+                    return `
+                        <tr style="${rowStyle}; transition: 0.3s;">
+                            <td style="border-bottom: 1px solid rgba(0,0,0,0.05);"><strong>${e.id}</strong></td>
+                            <td style="border-bottom: 1px solid rgba(0,0,0,0.05);"><span style="font-weight:600; color:var(--primary);">${e.tipo}</span></td>
+                            <td style="border-bottom: 1px solid rgba(0,0,0,0.05);">${e.marca} <br><span style="background:rgba(255,255,255,0.5); padding:2px 6px; border-radius:4px; font-size:11px; color:#1e293b;">${e.modelo}</span></td>
+                            <td style="border-bottom: 1px solid rgba(0,0,0,0.05);">${e.ubicacion}</td>
+                            <td style="border-bottom: 1px solid rgba(0,0,0,0.05); color:var(--secondary); font-weight:bold;">${fechaMostrar}</td>
+                            <td style="border-bottom: 1px solid rgba(0,0,0,0.05);">${btnHtml}</td>
+                        </tr>
+                    `;
+                }).join('');
             }
             tablaHtml += `</tbody></table>`;
 
