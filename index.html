@@ -1092,21 +1092,32 @@
             if (data) {
                 if(data.usuarios) usuariosDB = data.usuarios;
                 if(data.equipos) {
-                    data.equipos.forEach(e => {
-                        if (!e.historial) e.historial = [];
-                        if (!e.mesesMtto) e.mesesMtto = [];
-                    });
+                    data.equipos.forEach(e => { if (!e.historial) e.historial = []; if (!e.mesesMtto) e.mesesMtto = []; });
                     equiposDB = data.equipos;
                 }
                 if(data.tickets) {
-                    data.tickets.forEach(t => {
-                        if (!t.adjuntos) t.adjuntos = [];
-                        if (!t.historialSLA) t.historialSLA = [];
-                    });
+                    data.tickets.forEach(t => { if (!t.adjuntos) t.adjuntos = []; if (!t.historialSLA) t.historialSLA = []; });
                     ticketsDB = data.tickets;
                 } else { ticketsDB = []; }
                 
-                if(data.preventivos) preventivosDB = data.preventivos;
+                if(data.preventivos) {
+                    // SISTEMA DE NOTIFICACIONES EN TIEMPO REAL
+                    if (preventivosDB.length > 0 && currentUser) {
+                        data.preventivos.forEach(np => {
+                            const op = preventivosDB.find(p => p.id === np.id);
+                            if(!op || op.estado !== np.estado) {
+                                const eq = equiposDB.find(x => x.id === np.equipoId);
+                                if (eq && (eq.clinica === currentUser.user || currentUser.role === 'admin')) {
+                                    if(np.estado === 'PROPUESTA' && currentUser.role !== 'admin') showToast(`Ingeniería propuso fecha de preventivo para ${eq.tipo}`, 'info');
+                                    if(np.estado === 'REPROGRAMAR' && currentUser.role === 'admin') showToast(`Cliente solicita reprogramar preventivo de ${eq.tipo}`, 'warning');
+                                    if(np.estado === 'AGENDADO') showToast(`Preventivo de ${eq.tipo} agendado con éxito.`, 'success');
+                                    if(np.estado === 'COMPLETADO' && currentUser.role !== 'admin') showToast(`¡Mantenimiento de ${eq.tipo} completado!`, 'success');
+                                }
+                            }
+                        });
+                    }
+                    preventivosDB = data.preventivos;
+                }
                 if(data.repuestos) repuestosInventarioDB = data.repuestos;
                 
                 if (currentUser) refrescarVistasActivas();
@@ -1362,13 +1373,12 @@
             return 'pendiente';
         }
 
-        function renderEquiposTable() {
+       function renderEquiposTable() {
             const search = document.getElementById('search-equip').value.toLowerCase();
             const fC = document.getElementById('filter-clinica').value; const fU = document.getElementById('filter-ubicacion').value;
             const fT = document.getElementById('filter-tipo').value; const fM = document.getElementById('filter-marca').value;
 
             let data = currentUser.role === 'admin' ? equiposDB : equiposDB.filter(e => e.clinica === currentUser.user);
-            
             if (currentUser.role === 'admin' && window.workspaceActual && window.workspaceActual !== 'ALL') {
                 data = data.filter(e => e.clinica === window.workspaceActual);
             }
@@ -1386,6 +1396,9 @@
             for(let i=start; i<=end; i++) htmlDots += `<div class="dot ${i===currentPage?'active':''}" onclick="goToPage(${i})"></div>`;
             document.getElementById('dots-container').innerHTML = htmlDots;
             document.getElementById('btn-prev').disabled = currentPage === 1; document.getElementById('btn-next').disabled = currentPage === tPages;
+
+            const mesActual = new Date().getMonth() + 1;
+            const anioActual = new Date().getFullYear();
 
             document.querySelector('#equipos-table tbody').innerHTML = filteredEquipos.slice((currentPage-1)*pSize, currentPage*pSize).map(e => {
                 const eqTks = ticketsDB.filter(t => t.equipoId === e.id);
@@ -1406,8 +1419,17 @@
                     }
                 }
 
+                // APLICAR COLOR A LA FILA SEGUN ESTADO DEL MANTENIMIENTO
+                let pm = preventivosDB.find(p => p.equipoId === e.id && p.mes === mesActual && p.anio === anioActual);
+                let rowStyle = "";
+                if (pm) {
+                    if (pm.estado === 'PROPUESTA') rowStyle = "background-color: #fef9c3;"; // Amarillo
+                    else if (pm.estado === 'REPROGRAMAR') rowStyle = "background-color: #fee2e2;"; // Rojo
+                    else if (pm.estado === 'AGENDADO') rowStyle = "background-color: #e0f2fe;"; // Azul
+                }
+
                 return `
-                <tr class="clickable-row" onclick="abrirHojaDeVida('${e.id}')">
+                <tr class="clickable-row" style="${rowStyle}" onclick="abrirHojaDeVida('${e.id}')">
                     <td><strong>${e.id}</strong></td><td><span style="color:var(--secondary); font-weight:700; font-size:11px;">${e.ubicacion}</span></td>
                     <td><strong>${e.tipo}</strong> <br>${tkIconHtml}</td><td><span style="background:#e2e8f0; padding:4px 8px; border-radius:4px; font-size:11px; color:#1e293b; font-weight:600;">${e.modelo}</span></td>
                     <td>${e.marca}</td><td><code style="color:#475569; background:#f1f5f9; padding:2px 4px; border-radius:4px;">${e.serie}</code></td>
@@ -1467,14 +1489,13 @@
             `;
             setTimeout(() => { const selector = document.getElementById('mes-mtto-selector'); if (selector) selector.value = mesSeleccionado; }, 50);
         }
-
-        function abrirModalPM(equipoId, mes, anio) {
+function abrirModalPM(equipoId, mes, anio) {
             const eq = equiposDB.find(e => e.id === equipoId);
             let pm = preventivosDB.find(p => p.equipoId === equipoId && p.mes === mes && p.anio === anio);
             const isAdmin = currentUser.role === 'admin';
 
             currentPmId = pm ? pm.id : "PM-" + Math.floor(Math.random() * 900000);
-            if(!pm) pm = { id: currentPmId, equipoId, clinica: eq.clinica, mes, anio, estado: "PENDIENTE", fechaPropuesta: "", fechaSugerida: "", pdfAdjunto: null, pdfNombre: "" };
+            if(!pm) pm = { id: currentPmId, equipoId, clinica: eq.clinica, mes, anio, estado: "PENDIENTE", fechaPropuesta: "", fechaSugerida: "", motivoReprogramacion: "", pdfAdjunto: null, pdfNombre: "" };
             tempPmPdfBase64 = pm.pdfAdjunto; tempPmPdfName = pm.pdfNombre;
 
             let html = `
@@ -1514,6 +1535,12 @@
                         <div class="pm-box" style="background:#fef2f2; border-color:#fecaca;">
                             <h4 style="color:#b91c1c;"><i class="fas fa-exclamation-circle"></i> Solicitud de Reprogramación</h4>
                             <p style="font-size:13px; color:#991b1b;">El cliente no puede el ${formatearFecha(pm.fechaPropuesta)}. Sugiere fecha: <strong>${formatearFecha(pm.fechaSugerida)}</strong></p>
+                            
+                            <div style="background: white; padding: 10px; border-radius: 6px; border: 1px solid #fca5a5; margin-bottom: 15px;">
+                                <strong style="color: #b91c1c; font-size: 11px;">MOTIVO DEL CLIENTE:</strong>
+                                <p style="margin: 5px 0 0 0; font-size: 13px; color: #7f1d1d; font-style: italic;">"${pm.motivoReprogramacion || 'Sin motivo especificado'}"</p>
+                            </div>
+
                             <div style="display:flex; gap:10px; margin-top:15px;">
                                 <button class="btn btn-success" style="flex:1; justify-content:center;" onclick="accionPM('AGENDAR', '${pm.fechaSugerida}')"><i class="fas fa-check"></i> Aceptar Fecha del Cliente</button>
                             </div>
@@ -1555,8 +1582,13 @@
                             <p style="font-size:13px; color:#78350f;">Se solicita acceso al equipo el día: <strong style="font-size:15px;">${formatearFecha(pm.fechaPropuesta)}</strong></p>
                             <button class="btn btn-success" style="width:100%; justify-content:center; margin: 15px 0;" onclick="accionPMCliente('AGENDAR')"><i class="fas fa-check"></i> Aceptar y Confirmar Fecha</button>
                             <hr style="border:0; border-top:1px solid #fde68a; margin:15px 0;">
+                            
                             <label style="font-size:12px; font-weight:bold; color:#92400e; display:block; margin-bottom:5px;">¿Inconvenientes? Sugiere otra fecha:</label>
                             <input type="date" id="pm-fecha-cliente" class="editable-input" style="background:white; margin-bottom:10px; border-color:#fcd34d;">
+                            
+                            <label style="font-size:12px; font-weight:bold; color:#92400e; display:block; margin-bottom:5px;">Motivo obligatorio de la reprogramación:</label>
+                            <textarea id="pm-motivo-cliente" rows="2" class="editable-input" style="background:white; margin-bottom:10px; border-color:#fcd34d; width: 100%; box-sizing: border-box;" placeholder="Ej: El laboratorio estará cerrado ese día..."></textarea>
+                            
                             <button class="btn btn-outline" style="width:100%; justify-content:center; color:#92400e; border-color:#92400e;" onclick="accionPMCliente('REPROGRAMAR')">Solicitar Reprogramación</button>
                         </div>
                     `;
@@ -1599,12 +1631,13 @@
                 const f = document.getElementById('pm-fecha-admin').value;
                 if(!f) return alert("Selecciona una fecha.");
                 pm.fechaPropuesta = f; pm.estado = "PROPUESTA";
+                pm.fechaSugerida = ""; pm.motivoReprogramacion = "";
                 showToast("Propuesta de fecha enviada al cliente.", "success");
             } else if (accion === 'AGENDAR') {
                 pm.fechaPropuesta = fechaDirecta; pm.estado = "AGENDADO";
                 showToast("Mantenimiento Agendado Oficialmente.", "success");
             }
-            saveDB(); cerrarModal('pm-modal'); renderMantenimientos();
+            saveDB(); cerrarModal('pm-modal'); renderMantenimientos(); resetPageAndRender();
         }
 
         function accionPMCliente(accion) {
@@ -1613,10 +1646,16 @@
                 pm.estado = "AGENDADO"; showToast("Has confirmado la visita. Ingeniería ha sido notificada.", "success");
             } else if (accion === 'REPROGRAMAR') {
                 const f = document.getElementById('pm-fecha-cliente').value;
-                if(!f) return alert("Selecciona una fecha sugerida.");
-                pm.fechaSugerida = f; pm.estado = "REPROGRAMAR"; showToast("Solicitud de reprogramación enviada.", "warning");
+                const m = document.getElementById('pm-motivo-cliente').value.trim();
+                if(!f) return alert("Por favor selecciona una nueva fecha sugerida.");
+                if(!m) return alert("Es obligatorio ingresar el motivo de la reprogramación.");
+                
+                pm.fechaSugerida = f; 
+                pm.motivoReprogramacion = m;
+                pm.estado = "REPROGRAMAR"; 
+                showToast("Solicitud de reprogramación enviada.", "warning");
             }
-            saveDB(); cerrarModal('pm-modal'); renderMantenimientos();
+            saveDB(); cerrarModal('pm-modal'); renderMantenimientos(); resetPageAndRender();
         }
 
         function completarPM(equipoId, mes, anio) {
@@ -1629,7 +1668,7 @@
                 eq.historial.unshift({fecha: new Date().toLocaleDateString('es-ES'), tipo: "Preventivo", desc: `Mantenimiento Preventivo de Mes ${mes}/${anio} Completado. Reporte Adjunto.`, tecnico: "Ingeniería de Campo"});
                 eq.fechaUltimoMtto = new Date().toISOString().split('T')[0];
             }
-            saveDB(); cerrarModal('pm-modal'); renderMantenimientos(); showToast("Mantenimiento Preventivo cerrado con éxito.", "success");
+            saveDB(); cerrarModal('pm-modal'); renderMantenimientos(); resetPageAndRender(); showToast("Mantenimiento Preventivo cerrado con éxito.", "success");
         }
 
         function abrirModalAddEquipo() {
