@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AES O.S - Applied Engineering Solutions PRO v1.0</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -257,8 +258,7 @@
                                 <i class="fas fa-search" style="position: absolute; left: 14px; top: 14px; color: #94a3b8;"></i>
                                 <input type="text" placeholder="Búsqueda rápida por Modelo, N° de Serie o ID de Activo..." id="search-equip" style="width: 100%; padding-left: 40px; box-sizing: border-box;" onkeyup="resetPageAndRender()">
                             </div>
-                            <button class="btn btn-outline" style="padding: 10px 15px;" onclick="alert('Función de Escáner QR y Código de Barras disponible en el Módulo Móvil de Campo (Fase 3).')"><i class="fas fa-qrcode"></i> Lector QR</button>
-                            
+                            <button class="btn btn-outline" style="padding: 10px 15px;" onclick="abrirEscanerQR()"><i class="fas fa-camera"></i> Escanear Activo (QR)</button>                            
                             <div style="display: flex; align-items: center; gap: 10px; margin-left: 10px;">
                                 <label style="font-size: 11px; font-weight: bold; color: #64748b;">MOSTRAR:</label>
                                 <select id="pageSize" onchange="resetPageAndRender()" style="width: 80px;">
@@ -634,7 +634,13 @@
 
                 <div style="margin-bottom: 20px;">
                     <label style="font-weight:bold; font-size:11px; display:block; margin-bottom:8px; color: #475569;">INFORME TÉCNICO OFICIAL (Se mostrará al cliente):</label>
-                    <textarea id="res-comentario" rows="4" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:6px; box-sizing: border-box;" placeholder="Redacte el diagnóstico, reparación efectuada o justificación de la espera de importación..."></textarea>
+                    <textarea id="res-comentario" rows="4" style="width:100%; padding:12px; border:1px solid #cbd5e1; border-radius:6px; box-sizing: border-box; margin-bottom: 10px;" placeholder="Redacte el diagnóstico, reparación efectuada o justificación de la espera de importación..."></textarea>
+                    
+                    <div style="background: #e0f2fe; padding: 12px; border-radius: 6px; border: 1px solid #bae6fd; display: flex; align-items: center; gap: 15px;">
+                        <label style="font-weight:bold; font-size:11px; color: #0369a1;"><i class="fas fa-dollar-sign"></i> COSTO TOTAL DE ESTE SERVICIO (USD):</label>
+                        <input type="number" id="res-costo-servicio" placeholder="Ej: 150" style="padding: 8px; border: 1px solid #93c5fd; border-radius: 4px; width: 120px; font-weight: bold; color: #0f172a;">
+                        <span style="font-size: 10px; color: #0284c7;">*Incluye repuestos, viáticos y horas hombre. Uso exclusivo de ingeniería (TCO).</span>
+                    </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; background: #f0fdf4; padding: 20px; border-radius: 8px; border: 1px dashed #86efac;">
@@ -2736,6 +2742,88 @@
             cerrarModal('modal-reporte-ejecutivo');
         }, 1500); 
     }
+
+    // --- MÓDULO FINANCIERO (TCO) ---
+        // Vamos a interceptar la función existente para agregar los cálculos
+        const oldAbrirHojaDeVida = abrirHojaDeVida;
+        abrirHojaDeVida = function(id) {
+            oldAbrirHojaDeVida(id); // Ejecuta la función visual normal
+            const eq = equiposDB.find(e => e.id === id);
+            const eqTks = ticketsDB.filter(t => t.equipoId === id);
+            
+            let costoTotalMantenimiento = 0;
+            let repuestosCount = 0;
+            
+            eqTks.forEach(t => { 
+                if(t.costoServicio) costoTotalMantenimiento += parseFloat(t.costoServicio); 
+                if(t.piezaCambiada && t.piezaCambiada.trim() !== "" && t.piezaCambiada.trim().toLowerCase() !== "ninguno") {
+                    repuestosCount += t.piezaCambiada.split('|').length; 
+                }
+            });
+            
+            // Asumimos un valor base promedio de $15,000 USD para equipos médicos si no tienen precio de compra.
+            const valorAdquisicion = eq.costoAdquisicion || 15000; 
+            const porcentajeTCO = ((costoTotalMantenimiento / valorAdquisicion) * 100).toFixed(1);
+
+            let htmlObsolescencia = "";
+            if(porcentajeTCO > 40 || repuestosCount >= 4 || eqTks.length >= 6) {
+                htmlObsolescencia = `<div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 20px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                    <strong style="color: #b91c1c; font-size: 13px;"><i class="fas fa-exclamation-triangle"></i> ALERTA DE RENTABILIDAD Y TCO (End of Life):</strong> 
+                    <p style="color: #991b1b; font-size: 12px; margin: 5px 0 0 0;">Las reparaciones históricas suman <strong>$${costoTotalMantenimiento.toLocaleString()} USD</strong> (Representa el ${porcentajeTCO}% del valor del activo). Financieramente se sugiere dar de baja técnica o evaluar reemplazo tecnológico.</p>
+                </div>`;
+            } else if (costoTotalMantenimiento > 0) {
+                 htmlObsolescencia = `<div style="background: #f0fdf4; border-left: 4px solid #10b981; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
+                    <p style="color: #166534; font-size: 11px; margin: 0;"><i class="fas fa-chart-line"></i> <strong>Salud Financiera:</strong> Gasto histórico en reparaciones: $${costoTotalMantenimiento.toLocaleString()} USD (${porcentajeTCO}% de depreciación de mantenimiento).</p>
+                </div>`;
+            }
+            document.getElementById('alerta-obsolescencia-container').innerHTML = htmlObsolescencia;
+        };
+
+        const oldGuardarResolucionTicket = guardarResolucionTicket;
+        guardarResolucionTicket = function() {
+            const tkId = document.getElementById('res-ticket-id').value;
+            const costoIngresado = document.getElementById('res-costo-servicio') ? document.getElementById('res-costo-servicio').value : 0;
+            const tk = ticketsDB.find(t => t.id === tkId);
+            if(tk) tk.costoServicio = costoIngresado || 0;
+            oldGuardarResolucionTicket(); // Llama a la lógica original de guardado
+        };
+
+        // --- MÓDULO DE ESCÁNER DE CAMPO (CÁMARA NATIVA) ---
+        let html5QrcodeScanner;
+        function abrirEscanerQR() {
+            const old = document.getElementById('qr-modal'); if(old) old.remove();
+            const div = document.createElement('div');
+            div.id = 'qr-modal'; div.className = 'modal'; div.style.display = 'flex';
+            div.innerHTML = `
+                <div class="modal-content" style="max-width: 400px; padding: 20px; text-align: center;">
+                    <h3 style="color: var(--primary); margin-top:0;"><i class="fas fa-qrcode"></i> Lector Óptico de Activos</h3>
+                    <p style="font-size:12px; color:#64748b;">Apunta la cámara al código QR de la etiqueta del equipo.</p>
+                    <div id="reader" style="width: 100%; min-height: 250px; background: #f8fafc; border: 1px dashed #cbd5e1; margin-bottom: 15px; border-radius:8px; overflow:hidden;"></div>
+                    <button class="btn btn-danger" style="width:100%; justify-content:center;" onclick="cerrarScanner()"><i class="fas fa-times"></i> Cancelar / Apagar Cámara</button>
+                </div>
+            `;
+            document.body.appendChild(div);
+            
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+            html5QrcodeScanner.render((decodedText) => {
+                if(decodedText.includes('AES-OS-')) {
+                    const eqId = decodedText.replace('AES-OS-', '');
+                    const eq = equiposDB.find(e => e.id === eqId);
+                    if(eq) {
+                        cerrarScanner();
+                        switchTab('equipos'); // Asegurarnos de estar en la vista correcta
+                        setTimeout(() => abrirHojaDeVida(eq.id), 300);
+                        showToast("Activo escaneado y localizado.", "success");
+                    } else { alert('Código QR válido, pero el equipo no existe en esta base de datos.'); }
+                } else { alert('El código QR no pertenece a un equipo de AES O.S.'); }
+            }, (error) => {});
+        }
+
+        function cerrarScanner() {
+            if(html5QrcodeScanner) { html5QrcodeScanner.clear(); }
+            const mod = document.getElementById('qr-modal'); if(mod) mod.remove();
+        }
+
 </script>
 </body>
 </html>
