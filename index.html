@@ -2606,6 +2606,17 @@
         const total = tks.length;
         const resueltos = tks.filter(t => t.estado === 'Resuelto').length;
         const pendientes = total - resueltos;
+
+        // Capturar los gráficos interactivos como imágenes para el PDF
+        const chartFallas = document.getElementById('chartFallas');
+        const imgFallas = chartFallas ? chartFallas.toDataURL('image/png') : '';
+        const chartMtto = document.getElementById('chartMtto');
+        const imgMtto = chartMtto ? chartMtto.toDataURL('image/png') : '';
+        
+        // Extraer los tiempos SLA exactos que se ven en pantalla
+        const slaUptime = document.getElementById('sla-uptime') ? document.getElementById('sla-uptime').innerText : 'N/A';
+        const slaRespuesta = document.getElementById('sla-respuesta') ? document.getElementById('sla-respuesta').innerText : 'N/A';
+        const slaResolucion = document.getElementById('sla-resolucion') ? document.getElementById('sla-resolucion').innerText : 'N/A';
         
         const htmlPrint = `
         <!DOCTYPE html>
@@ -2613,54 +2624,82 @@
         <head>
             <title>Reporte_Ejecutivo_AES</title>
             <style>
-                body { font-family: 'Arial', sans-serif; padding: 40px; color: #1e293b; }
-                .header { text-align: center; border-bottom: 3px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
-                .header h1 { margin: 0; color: #0f172a; font-size: 22px; text-transform: uppercase; }
-                .header p { margin: 5px 0; color: #64748b; font-size: 12px; }
-                h2 { font-size: 14px; color: #2563eb; border-bottom: 1px solid #cbd5e1; padding-bottom: 5px; margin-top: 30px; text-transform: uppercase; }
-                .stats-grid { display: flex; gap: 20px; margin-bottom: 20px; }
-                .stat-box { flex: 1; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; background: #f8fafc; }
-                .stat-box h3 { margin: 0; font-size: 28px; color: #0f172a; }
+                body { font-family: 'Arial', sans-serif; padding: 40px; color: #1e293b; background: #fff; }
+                .header { text-align: center; border-bottom: 4px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; }
+                .header h1 { margin: 0; color: #0f172a; font-size: 26px; text-transform: uppercase; letter-spacing: 1px; }
+                .header p { margin: 5px 0; color: #64748b; font-size: 13px; }
+                .badge { background: #eff6ff; color: #1d4ed8; padding: 6px 12px; border-radius: 6px; border: 1px solid #bfdbfe; display: inline-block; font-weight: bold; margin-top: 10px; font-size: 12px; }
+                
+                h2 { font-size: 16px; background: #f1f5f9; padding: 10px 15px; border-left: 5px solid #2563eb; color: #0f172a; margin-top: 30px; text-transform: uppercase; }
+                
+                .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
+                .stat-box { padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; background: #f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,0.02); float: left; width: 28%; margin-right: 2%; }
+                .stat-box h3 { margin: 0; font-size: 26px; color: #0f172a; }
                 .stat-box p { margin: 5px 0 0 0; font-size: 11px; color: #64748b; font-weight: bold; text-transform: uppercase; }
-                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; }
-                th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
-                th { background-color: #f1f5f9; color: #475569; }
+                
+                .charts-container { display: flex; justify-content: center; gap: 20px; margin-top: 20px; text-align: center; clear: both; padding-top: 20px; }
+                .chart-wrapper { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; background: #fff; width: 45%; display: inline-block; vertical-align: top; box-sizing: border-box; }
+                .chart-wrapper h4 { margin: 0 0 15px 0; font-size: 12px; color: #475569; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
+                .chart-wrapper img { max-width: 100%; height: 200px; object-fit: contain; }
+
+                table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; clear: both; }
+                th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
+                th { background-color: #f1f5f9; color: #475569; font-weight: bold; text-transform: uppercase; }
                 tr:nth-child(even) { background-color: #f8fafc; }
+                
+                .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 15px; }
             </style>
         </head>
         <body>
             <div class="header">
-                <h1>Reporte Ejecutivo de Gestión Biomédica</h1>
-                <p style="font-weight: bold; font-size: 14px; color: #2563eb;">AES O.S PRO</p>
-                <p><strong>INSTITUCIÓN:</strong> ${window.workspaceActual === 'ALL' ? 'CONSOLIDADO GLOBAL' : window.workspaceActual}</p>
-                <p><strong>PERIODO:</strong> ${periodoTexto}</p>
+                <h1>Reporte Analítico y Operativo</h1>
+                <p style="font-weight: bold; font-size: 15px; color: #2563eb;">APPLIED ENGINEERING SOLUTIONS PRO</p>
+                <div class="badge">INSTITUCIÓN: ${window.workspaceActual === 'ALL' ? 'CONSOLIDADO GLOBAL' : window.workspaceActual}</div>
+                <p style="margin-top: 15px;"><strong>PERIODO EVALUADO:</strong> ${periodoTexto}</p>
             </div>
             
-            <h2>1. Resumen de Operatividad y Soporte</h2>
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <h3>${total}</h3>
-                    <p>Total Tickets Registrados</p>
-                </div>
+            <h2>1. Indicadores de Nivel de Servicio (SLA)</h2>
+            <div style="overflow: hidden; width: 100%;">
                 <div class="stat-box" style="border-color: #bbf7d0; background: #f0fdf4;">
-                    <h3 style="color: #166534;">${resueltos}</h3>
-                    <p>Tickets Finalizados / Resueltos</p>
+                    <h3 style="color: #166534;">${slaUptime}</h3>
+                    <p>Uptime Global (Operatividad)</p>
                 </div>
-                <div class="stat-box" style="border-color: #fecaca; background: #fef2f2;">
-                    <h3 style="color: #b91c1c;">${pendientes}</h3>
-                    <p>Tickets Abiertos / Pendientes</p>
+                <div class="stat-box" style="border-color: #bfdbfe; background: #eff6ff;">
+                    <h3 style="color: #1d4ed8;">${slaRespuesta}</h3>
+                    <p>Tiempo de Respuesta Promedio</p>
+                </div>
+                <div class="stat-box" style="border-color: #fde68a; background: #fffbeb;">
+                    <h3 style="color: #b45309;">${slaResolucion}</h3>
+                    <p>Tiempo de Resolución Promedio</p>
                 </div>
             </div>
 
-            <h2>2. Detalle de Incidencias en el Periodo</h2>
+            <h2>2. Resumen Gráfico de Gestión</h2>
+            <div class="charts-container">
+                ${imgFallas ? `
+                <div class="chart-wrapper">
+                    <h4>Estado de Tickets (Correctivos)</h4>
+                    <img src="${imgFallas}" alt="Gráfico de Fallas">
+                </div>` : ''}
+                ${imgMtto ? `
+                <div class="chart-wrapper">
+                    <h4>Cumplimiento Preventivos</h4>
+                    <img src="${imgMtto}" alt="Gráfico de Mantenimientos">
+                </div>` : ''}
+            </div>
+
+            <h2>3. Desglose Operativo (Tickets Generados)</h2>
+            <div style="margin-bottom: 15px; font-size: 12px; color: #475569;">
+                <strong>Total Atenciones:</strong> ${total} &nbsp;|&nbsp; <strong style="color:#10b981;">Resueltas:</strong> ${resueltos} &nbsp;|&nbsp; <strong style="color:#ef4444;">Pendientes:</strong> ${pendientes}
+            </div>
             <table>
                 <thead>
                     <tr>
-                        <th>ID Ticket</th>
-                        <th>Fecha Creación</th>
-                        <th>Equipo Afectado</th>
-                        <th>Falla Reportada</th>
-                        <th>Estado Actual</th>
+                        <th style="width: 15%;">ID Ticket</th>
+                        <th style="width: 15%;">Fecha</th>
+                        <th style="width: 25%;">Equipo Afectado</th>
+                        <th style="width: 30%;">Falla / Servicio Requerido</th>
+                        <th style="width: 15%;">Estado Actual</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -2669,15 +2708,18 @@
                             <td><strong>${t.id}</strong></td>
                             <td>${new Date(t.timestampCreacion || 0).toLocaleDateString('es-ES')}</td>
                             <td>${t.equipoNombre}</td>
-                            <td>${(t.descripcion || '').substring(0, 60)}...</td>
-                            <td><strong>${t.estado}</strong></td>
+                            <td>${(t.descripcion || '').substring(0, 70)}...</td>
+                            <td style="color: ${t.estado === 'Resuelto' ? '#10b981' : (t.estado.includes('Parado') ? '#ef4444' : '#2563eb')}; font-weight: bold;">
+                                ${t.estado}
+                            </td>
                         </tr>
                     `).join('') : '<tr><td colspan="5" align="center" style="padding:20px;">No se encontraron registros de incidencias para este periodo.</td></tr>'}
                 </tbody>
             </table>
             
-            <div style="margin-top: 50px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-                <p>Generado automáticamente por el módulo analítico de AES O.S PRO - Fecha de emisión: ${new Date().toLocaleString('es-ES')}</p>
+            <div class="footer">
+                <p>Generado automáticamente por el módulo de Inteligencia de Negocios de AES O.S PRO</p>
+                <p>Fecha de emisión del documento: ${new Date().toLocaleString('es-ES')}</p>
             </div>
         </body>
         </html>
@@ -2687,10 +2729,12 @@
         ventana.document.write(htmlPrint);
         ventana.document.close();
         ventana.focus();
+        
+        // Le damos 1 segundo y medio extra para que el PDF pueda cargar las "fotos" de las tortas
         setTimeout(() => { 
             ventana.print(); 
             cerrarModal('modal-reporte-ejecutivo');
-        }, 800);
+        }, 1500); 
     }
 </script>
 </body>
