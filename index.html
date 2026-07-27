@@ -4,7 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AES O.S - Applied Engineering Solutions PRO v1.0</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/html5-qrcode"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
@@ -2518,7 +2519,7 @@
             document.body.appendChild(div);
         }
 
-        // --- SISTEMA DE CONTROL DE CAMBIOS GLOBAL (100 EVENTOS) ---
+       // --- SISTEMA DE CONTROL DE CAMBIOS GLOBAL (100 EVENTOS) ---
         function abrirModalCambios() {
             let eventos = [];
             
@@ -2638,7 +2639,7 @@
                     const ts = t.timestampCreacion || 0;
                     return ts >= dInicio && ts <= dFin;
                 });
-                periodoTexto = \`DEL \${fInicio.split('-').reverse().join('/')} AL \${fFin.split('-').reverse().join('/')}\`;
+                periodoTexto = `DEL ${fInicio.split('-').reverse().join('/')} AL ${fFin.split('-').reverse().join('/')}`;
             }
             
             const total = tks.length;
@@ -2654,7 +2655,7 @@
             const slaRespuesta = document.getElementById('sla-respuesta') ? document.getElementById('sla-respuesta').innerText : 'N/A';
             const slaResolucion = document.getElementById('sla-resolucion') ? document.getElementById('sla-resolucion').innerText : 'N/A';
             
-            const htmlPrint = \`
+            const htmlPrint = `
             <!DOCTYPE html>
             <html lang="es">
             <head>
@@ -2690,43 +2691,43 @@
                 <div class="header">
                     <h1>Reporte Analítico y Operativo</h1>
                     <p style="font-weight: bold; font-size: 15px; color: #2563eb;">APPLIED ENGINEERING SOLUTIONS PRO</p>
-                    <div class="badge">INSTITUCIÓN: \${window.workspaceActual === 'ALL' ? 'CONSOLIDADO GLOBAL' : window.workspaceActual}</div>
-                    <p style="margin-top: 15px;"><strong>PERIODO EVALUADO:</strong> \${periodoTexto}</p>
+                    <div class="badge">INSTITUCIÓN: ${window.workspaceActual === 'ALL' ? 'CONSOLIDADO GLOBAL' : window.workspaceActual}</div>
+                    <p style="margin-top: 15px;"><strong>PERIODO EVALUADO:</strong> ${periodoTexto}</p>
                 </div>
                 
                 <h2>1. Indicadores de Nivel de Servicio (SLA)</h2>
                 <div style="overflow: hidden; width: 100%;">
                     <div class="stat-box" style="border-color: #bbf7d0; background: #f0fdf4;">
-                        <h3 style="color: #166534;">\${slaUptime}</h3>
+                        <h3 style="color: #166534;">${slaUptime}</h3>
                         <p>Uptime Global (Operatividad)</p>
                     </div>
                     <div class="stat-box" style="border-color: #bfdbfe; background: #eff6ff;">
-                        <h3 style="color: #1d4ed8;">\${slaRespuesta}</h3>
+                        <h3 style="color: #1d4ed8;">${slaRespuesta}</h3>
                         <p>Tiempo de Respuesta Promedio</p>
                     </div>
                     <div class="stat-box" style="border-color: #fde68a; background: #fffbeb;">
-                        <h3 style="color: #b45309;">\${slaResolucion}</h3>
+                        <h3 style="color: #b45309;">${slaResolucion}</h3>
                         <p>Tiempo de Resolución Promedio</p>
                     </div>
                 </div>
 
                 <h2>2. Resumen Gráfico de Gestión</h2>
                 <div class="charts-container">
-                    \${imgFallas ? \`
+                    ${imgFallas ? `
                     <div class="chart-wrapper">
                         <h4>Estado de Tickets (Correctivos)</h4>
-                        <img src="\${imgFallas}" alt="Gráfico de Fallas">
-                    </div>\` : ''}
-                    \${imgMtto ? \`
+                        <img src="${imgFallas}" alt="Gráfico de Fallas">
+                    </div>` : ''}
+                    ${imgMtto ? `
                     <div class="chart-wrapper">
                         <h4>Cumplimiento Preventivos</h4>
-                        <img src="\${imgMtto}" alt="Gráfico de Mantenimientos">
-                    </div>\` : ''}
+                        <img src="${imgMtto}" alt="Gráfico de Mantenimientos">
+                    </div>` : ''}
                 </div>
 
                 <h2>3. Desglose Operativo (Tickets Generados)</h2>
                 <div style="margin-bottom: 15px; font-size: 12px; color: #475569;">
-                    <strong>Total Atenciones:</strong> \${total} &nbsp;|&nbsp; <strong style="color:#10b981;">Resueltas:</strong> \${resueltos} &nbsp;|&nbsp; <strong style="color:#ef4444;">Pendientes:</strong> \${pendientes}
+                    <strong>Total Atenciones:</strong> ${total} &nbsp;|&nbsp; <strong style="color:#10b981;">Resueltas:</strong> ${resueltos} &nbsp;|&nbsp; <strong style="color:#ef4444;">Pendientes:</strong> ${pendientes}
                 </div>
                 <table>
                     <thead>
@@ -2739,27 +2740,27 @@
                         </tr>
                     </thead>
                     <tbody>
-                        \${tks.length > 0 ? tks.map(t => \`
+                        ${tks.length > 0 ? tks.map(t => `
                             <tr>
-                                <td><strong>\${t.id}</strong></td>
-                                <td>\${new Date(t.timestampCreacion || 0).toLocaleDateString('es-ES')}</td>
-                                <td>\${t.equipoNombre}</td>
-                                <td>\${(t.descripcion || '').substring(0, 70)}...</td>
-                                <td style="color: \${t.estado === 'Resuelto' ? '#10b981' : (t.estado.includes('Parado') ? '#ef4444' : '#2563eb')}; font-weight: bold;">
-                                    \${t.estado}
+                                <td><strong>${t.id}</strong></td>
+                                <td>${new Date(t.timestampCreacion || 0).toLocaleDateString('es-ES')}</td>
+                                <td>${t.equipoNombre}</td>
+                                <td>${(t.descripcion || '').substring(0, 70)}...</td>
+                                <td style="color: ${t.estado === 'Resuelto' ? '#10b981' : (t.estado.includes('Parado') ? '#ef4444' : '#2563eb')}; font-weight: bold;">
+                                    ${t.estado}
                                 </td>
                             </tr>
-                        \`).join('') : '<tr><td colspan="5" align="center" style="padding:20px;">No se encontraron registros de incidencias para este periodo.</td></tr>'}
+                        `).join('') : '<tr><td colspan="5" align="center" style="padding:20px;">No se encontraron registros de incidencias para este periodo.</td></tr>'}
                     </tbody>
                 </table>
                 
                 <div class="footer">
                     <p>Generado automáticamente por el módulo de Inteligencia de Negocios de AES O.S PRO</p>
-                    <p>Fecha de emisión del documento: \${new Date().toLocaleString('es-ES')}</p>
+                    <p>Fecha de emisión del documento: ${new Date().toLocaleString('es-ES')}</p>
                 </div>
             </body>
             </html>
-            \`;
+            `;
 
             const ventana = window.open('', '_blank');
             ventana.document.write(htmlPrint);
@@ -2778,17 +2779,16 @@
             const old = document.getElementById('qr-modal'); if(old) old.remove();
             const div = document.createElement('div');
             div.id = 'qr-modal'; div.className = 'modal'; div.style.display = 'flex';
-            div.innerHTML = \`
+            div.innerHTML = `
                 <div class="modal-content" style="max-width: 400px; padding: 20px; text-align: center;">
                     <h3 style="color: var(--primary); margin-top:0;"><i class="fas fa-qrcode"></i> Lector Óptico de Activos</h3>
                     <p style="font-size:12px; color:#64748b;">Apunta la cámara al código QR de la etiqueta del equipo.</p>
                     <div id="reader" style="width: 100%; min-height: 250px; background: #f8fafc; border: 1px dashed #cbd5e1; margin-bottom: 15px; border-radius:8px; overflow:hidden;"></div>
                     <button class="btn btn-danger" style="width:100%; justify-content:center;" onclick="cerrarScanner()"><i class="fas fa-times"></i> Cancelar / Apagar Cámara</button>
                 </div>
-            \`;
+            `;
             document.body.appendChild(div);
             
-            // Asumiendo que html5-qrcode.min.js está cargado
             html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
             html5QrcodeScanner.render((decodedText) => {
                 if(decodedText.includes('AES-OS-')) {
