@@ -259,6 +259,9 @@
                                 <input type="text" placeholder="Búsqueda rápida por Modelo, N° de Serie o ID de Activo..." id="search-equip" style="width: 100%; padding-left: 40px; box-sizing: border-box;" onkeyup="resetPageAndRender()">
                             </div>
                             
+                            <!-- BOTÓN DEL ESCÁNER QR REACTIVADO -->
+                            <button class="btn btn-outline" style="padding: 10px 15px;" onclick="abrirEscanerQR()"><i class="fas fa-camera"></i> Escanear Activo (QR)</button>
+                            
                             <div style="display: flex; align-items: center; gap: 10px; margin-left: 10px;">
                                 <label style="font-size: 11px; font-weight: bold; color: #64748b;">MOSTRAR:</label>
                                 <select id="pageSize" onchange="resetPageAndRender()" style="width: 80px;">
