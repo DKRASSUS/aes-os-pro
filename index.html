@@ -2373,7 +2373,7 @@
             saveDB(); cerrarModal('add-repuesto-modal'); renderAlmacen(); showToast("Pieza registrada en el Almacén Central.", "success");
         }
 
-        const kanbanCols = [
+       const kanbanCols = [
             { id: 'Pendiente de Revisión', name: 'Pendiente', color: '#64748b' }, { id: 'En Ejecución', name: 'En Proceso', color: '#3b82f6' },
             { id: 'Espera de Repuesto (Funcional)', name: 'Espera Pieza (Ok)', color: '#f59e0b' }, { id: 'Espera de Repuesto (Parado)', name: 'Parado (Crítico)', color: '#ef4444' },
             { id: 'Resuelto', name: 'Resuelto', color: '#10b981' }
@@ -2413,13 +2413,8 @@
             }).join('');
         }
 
-        function allowDrop(ev) {
-            ev.preventDefault();
-        }
-
-        function drag(ev, id) {
-            ev.dataTransfer.setData("text", id);
-        }
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drag(ev, id) { ev.dataTransfer.setData("text", id); }
 
         function drop(ev, nuevoEstado) {
             ev.preventDefault();
@@ -2427,25 +2422,17 @@
             const tk = ticketsDB.find(t => t.id === tkId);
             
             if (tk && tk.estado !== nuevoEstado) {
-                if (!tk.historialSLA) {
-                    tk.historialSLA = [{ estado: tk.estado, timestamp: Date.now() }];
-                }
+                if (!tk.historialSLA) { tk.historialSLA = [{ estado: tk.estado, timestamp: Date.now() }]; }
                 tk.historialSLA.push({ estado: nuevoEstado, timestamp: Date.now() });
                 
-                if(nuevoEstado === "Resuelto") {
-                    abrirResolucionTicket(tk.id);
-                    return;
-                }
+                if(nuevoEstado === "Resuelto") { abrirResolucionTicket(tk.id); return; }
                 
                 tk.estado = nuevoEstado;
-                saveDB();
-                renderKanban();
-                actualizarPantallasSuavemente();
+                saveDB(); renderKanban(); actualizarPantallasSuavemente();
                 showToast("Ticket movido a " + nuevoEstado, "success");
             }
         }
         
-        // FUNCIONES DE PIZARRA (FIRMAS)
         function iniciarPizarra() {
             ['tec', 'cli'].forEach(tipo => {
                 const canvas = document.getElementById('pizarra-firma-' + tipo);
@@ -2454,12 +2441,8 @@
                 let dibujando = false;
 
                 const rect = canvas.getBoundingClientRect();
-                canvas.width = rect.width;
-                canvas.height = rect.height;
-                
-                ctx.lineWidth = 2;
-                ctx.lineCap = 'round';
-                ctx.strokeStyle = '#0f172a';
+                canvas.width = rect.width; canvas.height = rect.height;
+                ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.strokeStyle = '#0f172a';
 
                 const getPos = (e) => {
                     const r = canvas.getBoundingClientRect();
@@ -2480,10 +2463,7 @@
 
         function limpiarFirma(tipo) {
             const c = document.getElementById('pizarra-firma-' + tipo);
-            if(c) {
-                const ctx = c.getContext('2d');
-                ctx.clearRect(0, 0, c.width, c.height);
-            }
+            if(c) { const ctx = c.getContext('2d'); ctx.clearRect(0, 0, c.width, c.height); }
         }
         
         function abrirAuditoria(tkId) {
@@ -2501,110 +2481,65 @@
             
             const old = document.getElementById('modal-auditoria'); if(old) old.remove();
             
-            const div = document.createElement('div');
-            div.id = 'modal-auditoria';
-            div.className = 'modal';
-            div.style.display = 'flex';
+            const div = document.createElement('div'); div.id = 'modal-auditoria'; div.className = 'modal'; div.style.display = 'flex';
             div.innerHTML = `
                 <div class="modal-content" style="max-width: 500px;">
                     <div class="modal-header" style="background:#fffbeb;">
                         <h3 style="margin:0; color:#b45309;"><i class="fas fa-history"></i> Historial de Cambios (Caja Negra)</h3>
                         <button class="close-modal" onclick="document.getElementById('modal-auditoria').remove()"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-body" style="max-height:60vh; overflow-y:auto;">
-                        ${html}
-                    </div>
+                    <div class="modal-body" style="max-height:60vh; overflow-y:auto;">${html}</div>
                 </div>
             `;
             document.body.appendChild(div);
         }
 
-       // --- SISTEMA DE CONTROL DE CAMBIOS GLOBAL (100 EVENTOS) ---
         function abrirModalCambios() {
             let eventos = [];
-            
             ticketsDB.forEach(tk => {
-                if(tk.timestampCreacion) {
-                    eventos.push({
-                        time: tk.timestampCreacion,
-                        icono: 'fa-plus-circle', color: '#8b5cf6',
-                        desc: `<strong>NUEVO TICKET CREADO:</strong> ${tk.id} <br><span style="font-size:11px; color:#64748b;">Equipo: ${tk.equipoNombre} (${tk.clinica})</span>`
-                    });
-                }
+                if(tk.timestampCreacion) { eventos.push({ time: tk.timestampCreacion, icono: 'fa-plus-circle', color: '#8b5cf6', desc: `<strong>NUEVO TICKET CREADO:</strong> ${tk.id} <br><span style="font-size:11px; color:#64748b;">Equipo: ${tk.equipoNombre} (${tk.clinica})</span>` }); }
                 if(tk.historialSLA) {
                     tk.historialSLA.forEach(sla => {
-                        if (sla.timestamp !== tk.timestampCreacion) {
-                            eventos.push({
-                                time: sla.timestamp,
-                                icono: 'fa-random', color: '#3b82f6',
-                                desc: `Ticket <strong>${tk.id}</strong> cambió a estado: <span style="background:${getBadgeColorReal(sla.estado)}; color:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">${sla.estado}</span>`
-                            });
-                        }
+                        if (sla.timestamp !== tk.timestampCreacion) { eventos.push({ time: sla.timestamp, icono: 'fa-random', color: '#3b82f6', desc: `Ticket <strong>${tk.id}</strong> cambió a estado: <span style="background:${getBadgeColorReal(sla.estado)}; color:white; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">${sla.estado}</span>` }); }
                     });
                 }
             });
-            
             equiposDB.forEach(eq => {
                 if(eq.historial) {
                     eq.historial.forEach((h, index) => {
                         let ts = 0;
-                        if(h.fecha && h.fecha.includes('/')) {
-                            let partes = h.fecha.split('/');
-                            ts = new Date(partes[2], partes[1] - 1, partes[0], 12, 0, 0).getTime() + index; 
-                        }
-                        
+                        if(h.fecha && h.fecha.includes('/')) { let partes = h.fecha.split('/'); ts = new Date(partes[2], partes[1] - 1, partes[0], 12, 0, 0).getTime() + index; }
                         let colorIcono = '#64748b'; let icono = 'fa-info-circle';
                         if(h.tipo.includes('Preventivo')) { colorIcono = '#10b981'; icono = 'fa-check-double'; }
                         if(h.tipo.includes('Alta')) { colorIcono = '#f59e0b'; icono = 'fa-star'; }
-                        
-                        eventos.push({
-                            time: ts,
-                            icono: icono, color: colorIcono,
-                            desc: `<strong>${h.tipo.toUpperCase()}</strong> en equipo ${eq.id} (${eq.tipo})<br><span style="font-size:11px; color:#475569;">${h.desc}</span>`
-                        });
+                        eventos.push({ time: ts, icono: icono, color: colorIcono, desc: `<strong>${h.tipo.toUpperCase()}</strong> en equipo ${eq.id} (${eq.tipo})<br><span style="font-size:11px; color:#475569;">${h.desc}</span>` });
                     });
                 }
             });
-            
             eventos.sort((a,b) => b.time - a.time);
             let top100 = eventos.slice(0, 100);
-            
             let htmlList = top100.map(e => `
                 <div style="padding: 15px; border-bottom: 1px solid #e2e8f0; display:flex; align-items:center; gap: 15px; background: white; transition: 0.2s;">
-                    <div style="background: ${e.color}20; color: ${e.color}; width: 40px; height: 40px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink: 0; border: 1px solid ${e.color}50;">
-                        <i class="fas ${e.icono}"></i>
-                    </div>
-                    <div style="flex-grow:1;">
-                        <p style="margin:0 0 5px 0; font-size:12px; color: #1e293b; line-height: 1.4;">${e.desc}</p>
-                        <span style="font-size:10px; color: #94a3b8; font-weight: bold;"><i class="far fa-clock"></i> ${e.time > 0 ? new Date(e.time).toLocaleString('es-ES') : 'Registro Histórico'}</span>
-                    </div>
+                    <div style="background: ${e.color}20; color: ${e.color}; width: 40px; height: 40px; border-radius: 50%; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink: 0; border: 1px solid ${e.color}50;"><i class="fas ${e.icono}"></i></div>
+                    <div style="flex-grow:1;"><p style="margin:0 0 5px 0; font-size:12px; color: #1e293b; line-height: 1.4;">${e.desc}</p><span style="font-size:10px; color: #94a3b8; font-weight: bold;"><i class="far fa-clock"></i> ${e.time > 0 ? new Date(e.time).toLocaleString('es-ES') : 'Registro Histórico'}</span></div>
                 </div>
             `).join('');
-
             if(top100.length === 0) htmlList = "<p style='padding:40px; text-align:center; color:#64748b; font-size:14px;'><i class='fas fa-inbox' style='font-size: 30px; display: block; margin-bottom: 15px; color:#cbd5e1;'></i>Sin acciones registradas aún.</p>";
 
-            const old = document.getElementById('modal-cambios-global');
-            if(old) old.remove();
-
-            const div = document.createElement('div');
-            div.id = 'modal-cambios-global';
-            div.className = 'modal';
-            div.style.display = 'flex';
+            const old = document.getElementById('modal-cambios-global'); if(old) old.remove();
+            const div = document.createElement('div'); div.id = 'modal-cambios-global'; div.className = 'modal'; div.style.display = 'flex';
             div.innerHTML = `
                 <div class="modal-content" style="max-width: 600px; padding: 0; overflow: hidden; background: #f8fafc;">
                     <div class="modal-header" style="background: white; border-bottom: 1px solid #e2e8f0; padding: 20px;">
                         <h3 style="margin:0; color: var(--primary); font-size: 16px;"><i class="fas fa-history" style="color:var(--secondary); margin-right: 8px;"></i> Registro del Sistema (Últimas 100 acciones)</h3>
                         <button class="close-modal" onclick="document.getElementById('modal-cambios-global').remove()"><i class="fas fa-times"></i></button>
                     </div>
-                    <div class="modal-body" style="max-height: 75vh; overflow-y: auto; padding: 0;">
-                        ${htmlList}
-                    </div>
+                    <div class="modal-body" style="max-height: 75vh; overflow-y: auto; padding: 0;">${htmlList}</div>
                 </div>
             `;
             document.body.appendChild(div);
         }
 
-        // --- FUNCIONES DEL REPORTE EJECUTIVO EN PDF ---
         function abrirModalReporteEjecutivo() {
             const modal = document.getElementById('modal-reporte-ejecutivo');
             if(modal) {
@@ -2621,36 +2556,19 @@
             const fFin = document.getElementById('rep-fecha-fin').value;
             
             let tks = ticketsDB;
-            if (currentUser.role !== 'admin') {
-                tks = tks.filter(t => t.clinica === currentUser.user);
-            } else if (window.workspaceActual && window.workspaceActual !== 'ALL') {
-                tks = tks.filter(t => t.clinica === window.workspaceActual);
-            }
+            if (currentUser.role !== 'admin') { tks = tks.filter(t => t.clinica === currentUser.user); } else if (window.workspaceActual && window.workspaceActual !== 'ALL') { tks = tks.filter(t => t.clinica === window.workspaceActual); }
 
             let periodoTexto = "HISTÓRICO GLOBAL (Toda la vida del sistema)";
-            
             if (tipo === 'CUSTOM') {
                 if (!fInicio || !fFin) return alert("Por favor selecciona la fecha de Inicio y de Fin.");
-                
-                const dInicio = new Date(fInicio + 'T00:00:00').getTime();
-                const dFin = new Date(fFin + 'T23:59:59').getTime();
-                
-                tks = tks.filter(t => {
-                    const ts = t.timestampCreacion || 0;
-                    return ts >= dInicio && ts <= dFin;
-                });
+                const dInicio = new Date(fInicio + 'T00:00:00').getTime(); const dFin = new Date(fFin + 'T23:59:59').getTime();
+                tks = tks.filter(t => { const ts = t.timestampCreacion || 0; return ts >= dInicio && ts <= dFin; });
                 periodoTexto = `DEL ${fInicio.split('-').reverse().join('/')} AL ${fFin.split('-').reverse().join('/')}`;
             }
             
-            const total = tks.length;
-            const resueltos = tks.filter(t => t.estado === 'Resuelto').length;
-            const pendientes = total - resueltos;
-
-            const chartFallas = document.getElementById('chartFallas');
-            const imgFallas = chartFallas ? chartFallas.toDataURL('image/png') : '';
-            const chartMtto = document.getElementById('chartMtto');
-            const imgMtto = chartMtto ? chartMtto.toDataURL('image/png') : '';
-            
+            const total = tks.length; const resueltos = tks.filter(t => t.estado === 'Resuelto').length; const pendientes = total - resueltos;
+            const chartFallas = document.getElementById('chartFallas'); const imgFallas = chartFallas ? chartFallas.toDataURL('image/png') : '';
+            const chartMtto = document.getElementById('chartMtto'); const imgMtto = chartMtto ? chartMtto.toDataURL('image/png') : '';
             const slaUptime = document.getElementById('sla-uptime') ? document.getElementById('sla-uptime').innerText : 'N/A';
             const slaRespuesta = document.getElementById('sla-respuesta') ? document.getElementById('sla-respuesta').innerText : 'N/A';
             const slaResolucion = document.getElementById('sla-resolucion') ? document.getElementById('sla-resolucion').innerText : 'N/A';
@@ -2666,24 +2584,19 @@
                     .header h1 { margin: 0; color: #0f172a; font-size: 26px; text-transform: uppercase; letter-spacing: 1px; }
                     .header p { margin: 5px 0; color: #64748b; font-size: 13px; }
                     .badge { background: #eff6ff; color: #1d4ed8; padding: 6px 12px; border-radius: 6px; border: 1px solid #bfdbfe; display: inline-block; font-weight: bold; margin-top: 10px; font-size: 12px; }
-                    
                     h2 { font-size: 16px; background: #f1f5f9; padding: 10px 15px; border-left: 5px solid #2563eb; color: #0f172a; margin-top: 30px; text-transform: uppercase; }
-                    
                     .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-bottom: 20px; }
                     .stat-box { padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px; text-align: center; background: #f8fafc; box-shadow: 0 2px 4px rgba(0,0,0,0.02); float: left; width: 28%; margin-right: 2%; }
                     .stat-box h3 { margin: 0; font-size: 26px; color: #0f172a; }
                     .stat-box p { margin: 5px 0 0 0; font-size: 11px; color: #64748b; font-weight: bold; text-transform: uppercase; }
-                    
                     .charts-container { display: flex; justify-content: center; gap: 20px; margin-top: 20px; text-align: center; clear: both; padding-top: 20px; }
                     .chart-wrapper { border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; background: #fff; width: 45%; display: inline-block; vertical-align: top; box-sizing: border-box; }
                     .chart-wrapper h4 { margin: 0 0 15px 0; font-size: 12px; color: #475569; text-transform: uppercase; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px; }
                     .chart-wrapper img { max-width: 100%; height: 200px; object-fit: contain; }
-
                     table { width: 100%; border-collapse: collapse; margin-top: 15px; font-size: 11px; clear: both; }
                     th, td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; }
                     th { background-color: #f1f5f9; color: #475569; font-weight: bold; text-transform: uppercase; }
                     tr:nth-child(even) { background-color: #f8fafc; }
-                    
                     .footer { margin-top: 50px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #e2e8f0; padding-top: 15px; }
                 </style>
             </head>
@@ -2694,86 +2607,36 @@
                     <div class="badge">INSTITUCIÓN: ${window.workspaceActual === 'ALL' ? 'CONSOLIDADO GLOBAL' : window.workspaceActual}</div>
                     <p style="margin-top: 15px;"><strong>PERIODO EVALUADO:</strong> ${periodoTexto}</p>
                 </div>
-                
                 <h2>1. Indicadores de Nivel de Servicio (SLA)</h2>
                 <div style="overflow: hidden; width: 100%;">
-                    <div class="stat-box" style="border-color: #bbf7d0; background: #f0fdf4;">
-                        <h3 style="color: #166534;">${slaUptime}</h3>
-                        <p>Uptime Global (Operatividad)</p>
-                    </div>
-                    <div class="stat-box" style="border-color: #bfdbfe; background: #eff6ff;">
-                        <h3 style="color: #1d4ed8;">${slaRespuesta}</h3>
-                        <p>Tiempo de Respuesta Promedio</p>
-                    </div>
-                    <div class="stat-box" style="border-color: #fde68a; background: #fffbeb;">
-                        <h3 style="color: #b45309;">${slaResolucion}</h3>
-                        <p>Tiempo de Resolución Promedio</p>
-                    </div>
+                    <div class="stat-box" style="border-color: #bbf7d0; background: #f0fdf4;"><h3 style="color: #166534;">${slaUptime}</h3><p>Uptime Global (Operatividad)</p></div>
+                    <div class="stat-box" style="border-color: #bfdbfe; background: #eff6ff;"><h3 style="color: #1d4ed8;">${slaRespuesta}</h3><p>Tiempo de Respuesta Promedio</p></div>
+                    <div class="stat-box" style="border-color: #fde68a; background: #fffbeb;"><h3 style="color: #b45309;">${slaResolucion}</h3><p>Tiempo de Resolución Promedio</p></div>
                 </div>
-
                 <h2>2. Resumen Gráfico de Gestión</h2>
                 <div class="charts-container">
-                    ${imgFallas ? `
-                    <div class="chart-wrapper">
-                        <h4>Estado de Tickets (Correctivos)</h4>
-                        <img src="${imgFallas}" alt="Gráfico de Fallas">
-                    </div>` : ''}
-                    ${imgMtto ? `
-                    <div class="chart-wrapper">
-                        <h4>Cumplimiento Preventivos</h4>
-                        <img src="${imgMtto}" alt="Gráfico de Mantenimientos">
-                    </div>` : ''}
+                    ${imgFallas ? `<div class="chart-wrapper"><h4>Estado de Tickets (Correctivos)</h4><img src="${imgFallas}" alt="Gráfico de Fallas"></div>` : ''}
+                    ${imgMtto ? `<div class="chart-wrapper"><h4>Cumplimiento Preventivos</h4><img src="${imgMtto}" alt="Gráfico de Mantenimientos"></div>` : ''}
                 </div>
-
                 <h2>3. Desglose Operativo (Tickets Generados)</h2>
-                <div style="margin-bottom: 15px; font-size: 12px; color: #475569;">
-                    <strong>Total Atenciones:</strong> ${total} &nbsp;|&nbsp; <strong style="color:#10b981;">Resueltas:</strong> ${resueltos} &nbsp;|&nbsp; <strong style="color:#ef4444;">Pendientes:</strong> ${pendientes}
-                </div>
+                <div style="margin-bottom: 15px; font-size: 12px; color: #475569;"><strong>Total Atenciones:</strong> ${total} &nbsp;|&nbsp; <strong style="color:#10b981;">Resueltas:</strong> ${resueltos} &nbsp;|&nbsp; <strong style="color:#ef4444;">Pendientes:</strong> ${pendientes}</div>
                 <table>
-                    <thead>
-                        <tr>
-                            <th style="width: 15%;">ID Ticket</th>
-                            <th style="width: 15%;">Fecha</th>
-                            <th style="width: 25%;">Equipo Afectado</th>
-                            <th style="width: 30%;">Falla / Servicio Requerido</th>
-                            <th style="width: 15%;">Estado Actual</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th style="width: 15%;">ID Ticket</th><th style="width: 15%;">Fecha</th><th style="width: 25%;">Equipo Afectado</th><th style="width: 30%;">Falla / Servicio Requerido</th><th style="width: 15%;">Estado Actual</th></tr></thead>
                     <tbody>
                         ${tks.length > 0 ? tks.map(t => `
-                            <tr>
-                                <td><strong>${t.id}</strong></td>
-                                <td>${new Date(t.timestampCreacion || 0).toLocaleDateString('es-ES')}</td>
-                                <td>${t.equipoNombre}</td>
-                                <td>${(t.descripcion || '').substring(0, 70)}...</td>
-                                <td style="color: ${t.estado === 'Resuelto' ? '#10b981' : (t.estado.includes('Parado') ? '#ef4444' : '#2563eb')}; font-weight: bold;">
-                                    ${t.estado}
-                                </td>
-                            </tr>
+                            <tr><td><strong>${t.id}</strong></td><td>${new Date(t.timestampCreacion || 0).toLocaleDateString('es-ES')}</td><td>${t.equipoNombre}</td><td>${(t.descripcion || '').substring(0, 70)}...</td><td style="color: ${t.estado === 'Resuelto' ? '#10b981' : (t.estado.includes('Parado') ? '#ef4444' : '#2563eb')}; font-weight: bold;">${t.estado}</td></tr>
                         `).join('') : '<tr><td colspan="5" align="center" style="padding:20px;">No se encontraron registros de incidencias para este periodo.</td></tr>'}
                     </tbody>
                 </table>
-                
-                <div class="footer">
-                    <p>Generado automáticamente por el módulo de Inteligencia de Negocios de AES O.S PRO</p>
-                    <p>Fecha de emisión del documento: ${new Date().toLocaleString('es-ES')}</p>
-                </div>
+                <div class="footer"><p>Generado automáticamente por el módulo de Inteligencia de Negocios de AES O.S PRO</p><p>Fecha de emisión del documento: ${new Date().toLocaleString('es-ES')}</p></div>
             </body>
             </html>
             `;
 
             const ventana = window.open('', '_blank');
-            ventana.document.write(htmlPrint);
-            ventana.document.close();
-            ventana.focus();
-            
-            setTimeout(() => { 
-                ventana.print(); 
-                cerrarModal('modal-reporte-ejecutivo');
-            }, 1500); 
+            ventana.document.write(htmlPrint); ventana.document.close(); ventana.focus();
+            setTimeout(() => { ventana.print(); cerrarModal('modal-reporte-ejecutivo'); }, 1500); 
         }
-
-        // --- MÓDULO DE ESCÁNER DE CAMPO (CÁMARA NATIVA) ---
         let html5QrcodeScanner;
         function abrirEscanerQR() {
             const old = document.getElementById('qr-modal'); if(old) old.remove();
