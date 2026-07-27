@@ -1652,6 +1652,7 @@
             
             const eqTks = ticketsDB.filter(t => t.equipoId === id);
             let repuestosCount = 0; let costoTotalMantenimiento = 0;
+            
             eqTks.forEach(t => { 
                 if(t.costoServicio) costoTotalMantenimiento += parseFloat(t.costoServicio);
                 if(t.piezaCambiada && t.piezaCambiada.trim() !== "" && t.piezaCambiada.trim().toLowerCase() !== "ninguno") {
@@ -1661,10 +1662,11 @@
             
             const costoAdq = eq.costoAdquisicion || 0;
             let htmlObsolescencia = "";
+            
             if (costoAdq > 0) {
                 const porcentajeTCO = ((costoTotalMantenimiento / costoAdq) * 100).toFixed(1);
                 if(porcentajeTCO > 40 || repuestosCount >= 4 || eqTks.length >= 6) {
-                    htmlObsolescencia = `<div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                    htmlObsolescencia = `<div style="background: #fef2f2; border-left: 4px solid #ef4444; padding: 15px; margin-bottom: 20px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
                         <strong style="color: #b91c1c; font-size: 13px;"><i class="fas fa-exclamation-triangle"></i> ALERTA DE RENTABILIDAD Y TCO (End of Life):</strong> 
                         <p style="color: #991b1b; font-size: 12px; margin: 5px 0 0 0;">Las reparaciones históricas suman <strong>$${costoTotalMantenimiento.toLocaleString('en-US')} USD</strong> (Representa el ${porcentajeTCO}% del valor de adquisición de $${costoAdq.toLocaleString('en-US')}). Financieramente se sugiere dar de baja técnica o evaluar reemplazo tecnológico.</p>
                     </div>`;
@@ -1681,7 +1683,7 @@
                     </div>`;
                 } else if (isAdmin) {
                     htmlObsolescencia = `<div style="background: #f8fafc; border-left: 4px solid #94a3b8; padding: 12px; margin-bottom: 20px; border-radius: 4px;">
-                        <p style="color: #475569; font-size: 11px; margin: 0;"><i class="fas fa-info-circle"></i> Defina el Costo de Adquisición editando la ficha para activar el análisis TCO.</p>
+                        <p style="color: #475569; font-size: 11px; margin: 0;"><i class="fas fa-info-circle"></i> Defina el Costo de Adquisición editando la ficha inferior para activar el análisis TCO.</p>
                     </div>`;
                 }
             }
@@ -1695,9 +1697,10 @@
                     <div class="spec-item"><span class="spec-label">ID Sistema</span> <span class="spec-value"><strong>${eq.id}</strong></span></div><div class="spec-item"><span class="spec-label">Institución Propietaria</span> <span class="spec-value">${eq.clinica}</span></div>
                     <div class="spec-item"><span class="spec-label">Tipo Equipamiento</span> <input type="text" id="edit-tipo" class="editable-input" value="${eq.tipo}"></div><div class="spec-item"><span class="spec-label">Marca/Fabricante</span> <input type="text" id="edit-marca" class="editable-input" value="${eq.marca}"></div>
                     <div class="spec-item"><span class="spec-label">Modelo</span> <input type="text" id="edit-modelo" class="editable-input" value="${eq.modelo}"></div><div class="spec-item"><span class="spec-label">Serial Number (SN)</span> <input type="text" id="edit-serie" class="editable-input" value="${eq.serie}"></div>
-                    <div class="spec-item"><span class="spec-label">Área Clínica / Ubicación Física</span> <input type="text" id="edit-ubicacion" class="editable-input" value="${eq.ubicacion}"></div>
-                    <div class="spec-item"><span class="spec-label">Costo Adquisición (USD)</span> <input type="number" id="edit-costo" class="editable-input" style="border-color:#10b981; color:#047857;" value="${eq.costoAdquisicion || 0}"></div>
-                    <div class="spec-item"><span class="spec-label">Último Mantenimiento Oficial</span> <input type="date" id="edit-ult-mtto" class="editable-input" style="border-color:var(--solved);" value="${eq.fechaUltimoMtto}"></div><div class="spec-item"><span class="spec-label">Próxima Intervención (Vencimiento)</span> <input type="date" id="edit-prox-mtto" class="editable-input" style="border-color:var(--waiting);" value="${eq.fechaProximoMtto}"></div>
+                    <div class="spec-item" style="grid-column: span 2;"><span class="spec-label">Área Clínica / Ubicación Física</span> <input type="text" id="edit-ubicacion" class="editable-input" value="${eq.ubicacion}"></div>
+                    <div class="spec-item"><span class="spec-label">Costo Adquisición (USD)</span> <input type="number" id="edit-costo" class="editable-input" style="border-color:#10b981; color:#047857; font-weight:bold;" value="${eq.costoAdquisicion || 0}"></div>
+                    <div class="spec-item"><span class="spec-label">Último Mantenimiento Oficial</span> <input type="date" id="edit-ult-mtto" class="editable-input" style="border-color:var(--solved);" value="${eq.fechaUltimoMtto}"></div>
+                    <div class="spec-item" style="grid-column: span 2;"><span class="spec-label">Próxima Intervención (Vencimiento)</span> <input type="date" id="edit-prox-mtto" class="editable-input" style="border-color:var(--waiting);" value="${eq.fechaProximoMtto}"></div>
                     <div class="qr-box" style="grid-column: span 2;"><span class="spec-label" style="display:block; margin-bottom:10px;">CÓDIGO QR DE ACTIVOS (ESCANEAR EN CAMPO)</span><img src="${qrUrl}" alt="QR Code" id="qr-image"><br><button class="btn btn-outline" style="font-size:11px; margin-top:10px;" onclick="window.open('${qrUrl}', '_blank').print()"><i class="fas fa-print"></i> Imprimir Etiqueta</button></div>
                 `;
             } else {
@@ -1731,13 +1734,18 @@
         
         function guardarEdicionAdmin() {
             const eq = equiposDB.find(e => e.id === selectedEquipoId);
-            eq.tipo = document.getElementById('edit-tipo').value; eq.marca = document.getElementById('edit-marca').value; eq.modelo = document.getElementById('edit-modelo').value; eq.serie = document.getElementById('edit-serie').value; eq.ubicacion = document.getElementById('edit-ubicacion').value;
+            eq.tipo = document.getElementById('edit-tipo').value; 
+            eq.marca = document.getElementById('edit-marca').value; 
+            eq.modelo = document.getElementById('edit-modelo').value; 
+            eq.serie = document.getElementById('edit-serie').value; 
+            eq.ubicacion = document.getElementById('edit-ubicacion').value;
             eq.costoAdquisicion = parseFloat(document.getElementById('edit-costo').value) || 0;
-            eq.fechaUltimoMtto = document.getElementById('edit-ult-mtto').value; eq.fechaProximoMtto = document.getElementById('edit-prox-mtto').value;
+            eq.fechaUltimoMtto = document.getElementById('edit-ult-mtto').value; 
+            eq.fechaProximoMtto = document.getElementById('edit-prox-mtto').value;
             if(tempEqFotoBase64) eq.foto = tempEqFotoBase64;
             saveDB(); poblarFiltros(); renderEquiposTable(); 
             if(document.getElementById('view-mantenimientos').classList.contains('active')) renderMantenimientos();
-            abrirHojaDeVida(eq.id); // Refresca para mostrar los cálculos financieros nuevos
+            abrirHojaDeVida(eq.id);
             showToast("✅ Base de Datos Maestra Actualizada.", "success");
         }
 
