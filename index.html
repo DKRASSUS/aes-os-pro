@@ -1763,19 +1763,39 @@
 
         function abrirModalTicket() { const eq=equiposDB.find(e=>e.id===selectedEquipoId); document.getElementById('ticket-equipo-id').value=eq.id; document.getElementById('ticket-equipo-nombre').value=`${eq.tipo} - ${eq.marca} ${eq.modelo}`; document.getElementById('ticket-descripcion').value=""; document.getElementById('ticket-modal').style.display='flex'; }
         
-        function enviarTicket() { 
+       function enviarTicket() { 
             const d=document.getElementById('ticket-descripcion').value.trim(); if(!d)return alert("Ingrese la sintomatología"); 
             const eq=equiposDB.find(e=>e.id===document.getElementById('ticket-equipo-id').value); 
             let timestampActual = Date.now();
             let estadoInicial = "Pendiente de Revisión";
+            let nuevoIdTk = "TK-"+Math.floor(9000+Math.random()*1000);
+
             ticketsDB.unshift({
-                id:"TK-"+Math.floor(9000+Math.random()*1000), equipoId:eq.id, clinica:eq.clinica, equipoNombre:`${eq.tipo} (${eq.modelo})`, 
+                id: nuevoIdTk, equipoId:eq.id, clinica:eq.clinica, equipoNombre:`${eq.tipo} (${eq.modelo})`, 
                 descripcion:d, fecha:new Date().toLocaleDateString('es-ES'), estado: estadoInicial,
                 comentarioTecnico:"", piezaCambiada:"", costoServicio: 0, fotoAdjunta:null, adjuntos:[], 
                 timestampCreacion: timestampActual, historialSLA: [{ estado: estadoInicial, timestamp: timestampActual }]
             }); 
             saveDB(); cerrarModal('ticket-modal'); cerrarModal('hdv-modal'); switchTab('tickets-cliente'); 
             showToast("Ticket enviado correctamente a Ingeniería.", "success");
+
+            // --- INICIO DE CONEXIÓN CON MAKE.COM ---
+            const webhookUrl = "https://hook.us2.make.com/iuj7vc990g5gtq8phmwg7gy5vdhp34kg";
+            
+            const payload = {
+                ticket_id: nuevoIdTk,
+                clinica: eq.clinica,
+                equipo: `${eq.tipo} (${eq.marca} - ${eq.modelo})`,
+                falla: d,
+                fecha: new Date().toLocaleDateString('es-ES')
+            };
+
+            fetch(webhookUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            }).catch(e => console.log("Aviso: No se pudo conectar con Make."));
+            // --- FIN DE CONEXIÓN ---
         }
 
         function abrirResolucionTicket(id) {
